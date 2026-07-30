@@ -1,0 +1,1 @@
+Add a feature flag reader without renaming the exported getConfig API.

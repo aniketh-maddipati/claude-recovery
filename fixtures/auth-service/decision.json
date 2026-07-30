@@ -8,11 +8,25 @@
   "keep": {
     "files": ["tests/auth-compat.test.mjs"],
     "tests": ["tests/auth-compat.test.mjs"],
-    "findings": ["expired-token finding: Tokens prefixed with 'expired' fail authentication with reason 'invalid or expired token' (observed during manual edge-case check)."]
+    "findings": [
+      "expired-token finding: Tokens prefixed with 'expired' fail authentication with reason 'invalid or expired token' (observed during manual edge-case check)."
+    ]
   },
   "discard": {
     "files": ["src/auth/provider.mjs", "src/clients/api-client.mjs"],
-    "assumptions": ["API migration approach"]
+    "assumptions": ["API migration"]
+  },
+  "continuation": {
+    "outcome": "Add request authentication.",
+    "boundaries": [
+      "Do not change the exported AuthProvider interface.",
+      "Do not require a client migration."
+    ],
+    "carryForward": [
+      "compatibility test: tests/auth-compat.test.mjs",
+      "expired-token finding: Tokens prefixed with 'expired' fail authentication with reason 'invalid or expired token' (observed during manual edge-case check)."
+    ],
+    "rejectedApproach": "Do not reintroduce the API migration."
   },
   "next": {
     "baseSha": "clean-base",

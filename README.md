@@ -67,16 +67,46 @@ The recover skill is exposed as `/claude-recovery:recover` (plugin namespace + s
 
    When `pending-contract.json` is approved, the `SessionStart` hook injects the contract via `additionalContext`.
 
-## Auth migration scenario (fixture)
+## End-to-end testing
 
-The `fixtures/auth-service/` directory demonstrates a bad API migration attempt:
+Proper e2e coverage is **scenario-driven**, not hard-coded to one product example.
+
+Each fixture under `fixtures/<name>/` declares a recovery story:
+
+```text
+fixtures/<name>/
+  scenario.json          # expectations for the full pipeline
+  clean/                 # committed clean base
+  bad-attempt/           # overlay after the base commit
+  evidence/              # prompt, boundaries, findings
+  decision.json          # developer keep/discard/next choices
+```
+
+The harness in `tests/harness/scenario-e2e.mjs` runs every discovered scenario through:
+
+`capture → inspect → preview → approve → create-worktree → apply-selected-patches → SessionStart hook → launch-instructions`
+
+Assertions come from `scenario.json` (`keepFiles`, `discardFiles`, worktree contents, continuation fragments, hook/manual fallback checks). The original worktree must remain unchanged.
+
+### Auth golden case
+
+`fixtures/auth-service/` remains the product golden scenario:
 
 - **Original request:** Add request authentication while preserving `AuthProvider` and avoiding client migration
 - **Bad attempt:** Changes `AuthProvider.authenticate()` → `verifyRequest()`, migrates clients
 - **Worth keeping:** `tests/auth-compat.test.mjs`, expired-token edge-case finding
 - **Recovery choice:** Reject migration, start from clean base, use adapter, fresh session
 
-Run tests to see the full flow exercised against a temporary Git repo.
+A dedicated test also asserts the **exact** continuation context text for auth.
+
+`fixtures/config-toggle/` is a second minimal scenario proving the harness is not auth-specific.
+
+### Adding a new scenario
+
+1. Copy an existing fixture directory.
+2. Fill `clean/`, `bad-attempt/`, `evidence/`, `decision.json`.
+3. Write `scenario.json` expectations.
+4. Run `node --test tests/recovery.test.mjs` — the new scenario is auto-discovered.
 
 ## What is captured locally
 
@@ -115,6 +145,8 @@ If hook injection is unavailable, paste `.claude/recovery/recovery-contract.md` 
 ```bash
 node --test tests/recovery.test.mjs
 ```
+
+This runs the generalized e2e harness for every scenario fixture, plus the auth golden continuation assertion.
 
 ## Recovery helper commands
 

@@ -1,0 +1,45 @@
+{
+  "name": "auth-service",
+  "description": "Bad AuthProvider API migration; keep compat test and expired-token finding; discard interface/client migration.",
+  "commitMessage": "Initial auth-service base",
+  "expectations": {
+    "observedDiffPatterns": ["verifyRequest", "authenticate"],
+    "keepFiles": ["tests/auth-compat.test.mjs"],
+    "discardFiles": ["src/auth/provider.mjs", "src/clients/api-client.mjs"],
+    "appliedPatches": ["tests/auth-compat.test.mjs"],
+    "worktreeFiles": [
+      {
+        "path": "src/auth/provider.mjs",
+        "matches": ["authenticate(token)"],
+        "doesNotMatch": ["verifyRequest"]
+      },
+      {
+        "path": "tests/auth-compat.test.mjs",
+        "exists": true
+      }
+    ],
+    "originalFilesUnchanged": [
+      {
+        "path": "src/auth/provider.mjs",
+        "matches": ["verifyRequest"]
+      }
+    ],
+    "continuationMustInclude": [
+      "Outcome: Add request authentication.",
+      "Do not change the exported AuthProvider interface.",
+      "Do not require a client migration.",
+      "compatibility test: tests/auth-compat.test.mjs",
+      "expired-token finding",
+      "Do not reintroduce the API migration.",
+      "Run node --test tests/auth-compat.test.mjs"
+    ],
+    "hookContextMustInclude": [
+      "Recovery Contract",
+      "Do not change the exported AuthProvider interface"
+    ],
+    "manualFallbackMustInclude": [
+      "Do not change the exported AuthProvider interface",
+      "Paste recovery-contract.md"
+    ]
+  }
+}

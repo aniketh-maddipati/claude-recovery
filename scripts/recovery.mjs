@@ -276,31 +276,42 @@ function resolveBaseSha(cwd, decision) {
   return evidence?.sourceSha ?? requireGitRepo(cwd);
 }
 
-function buildContinuationContext(decision, cwd, manifest) {
-  const findings = (decision.keep?.findings ?? [])
-    .map((f) => `- ${f}`)
-    .join('\n');
-  const keptTests = (decision.keep?.tests ?? decision.keep?.files ?? [])
-    .filter((f) => String(f).includes('test'))
-    .map((f) => `- compatibility test: ${f}`)
-    .join('\n');
+function shortOutcome(text) {
+  if (!text) return '(unspecified)';
+  const first = String(text).trim().split(/[.!?]/)[0].trim();
+  return first.endsWith('.') ? first : `${first}.`;
+}
+
+function buildContinuationContext(decision, _cwd, manifest) {
   const verification = decision.next?.verificationCommand ?? manifest.verificationCommand;
   const baseSha = manifest.baseSha ?? manifest.sourceSha;
+  const cont = decision.continuation ?? {};
+  const outcome = cont.outcome ?? shortOutcome(decision.originalOutcome);
+  const boundaries = cont.boundaries ?? decision.pinnedBoundaries ?? [];
+  const carryForward = cont.carryForward ?? [
+    ...(decision.keep?.tests ?? []).map((t) => `compatibility test: ${t}`),
+    ...(decision.keep?.findings ?? []),
+  ];
+  const rejectedFromAssumptions = (decision.discard?.assumptions ?? [])
+    .map((a) => `Do not reintroduce the ${a}.`)
+    .join('\n');
+  const rejected =
+    cont.rejectedApproach ||
+    rejectedFromAssumptions ||
+    'Do not reintroduce rejected approaches.';
 
   return [
-    'Outcome: Add request authentication.',
+    `Outcome: ${outcome}`,
     '',
     'Non-negotiable boundary:',
-    'Do not change the exported AuthProvider interface.',
-    'Do not require a client migration.',
+    ...(boundaries.length ? boundaries : ['(none specified)']),
     '',
     'Carry forward:',
-    keptTests || '- compatibility test: (none selected)',
-    findings || '- expired-token finding: (none selected)',
+    ...(carryForward.length ? carryForward.map((line) => `- ${line}`) : ['- (none selected)']),
     `- verified repository base: ${baseSha}`,
     '',
     'Rejected approach:',
-    'Do not reintroduce the API migration.',
+    rejected,
     '',
     'Before claiming completion:',
     `Run ${verification}`,

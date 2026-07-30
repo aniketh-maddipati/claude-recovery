@@ -1,0 +1,295 @@
+/**
+ * Generalized end-to-end recovery harness.
+ *
+ * Any fixture under fixtures/<name>/ with this layout can be exercised:
+ *
+ *   fixtures/<name>/
+ *     scenario.json          # name, commitMessage, expectations
+ *     clean/                 # files committed as the clean base
+ *     bad-attempt/           # overlay applied after the base commit
+ *     evidence/
+ *       original-prompt.txt
+ *       boundaries.json
+ *       findings.json
+ *     decision.json          # developer recovery decision
+ *
+ * The harness runs: capture → inspect → preview → approve → worktree →
+ * apply → launch-instructions → SessionStart hook checks.
+ */
+
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
+import assert from 'node:assert/strict';
+import { createSessionHookOutput, runRecovery } from '../helpers.mjs';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+export const ROOT = join(__dirname, '..', '..');
+export const FIXTURES_DIR = join(ROOT, 'fixtures');
+export const SESSION_HOOK = join(ROOT, 'scripts', 'session-hook.mjs');
+
+export function git(args, cwd) {
+  const result = spawnSync('git', args, { cwd, encoding: 'utf8' });
+  if (result.status !== 0) {
+    throw new Error(`git ${args.join(' ')} failed: ${result.stderr}`);
+  }
+  return result.stdout.trim();
+}
+
+export function listScenarios() {
+  return readdirSync(FIXTURES_DIR)
+    .filter((name) => {
+      const dir = join(FIXTURES_DIR, name);
+      return (
+        statSync(dir).isDirectory() &&
+        existsSync(join(dir, 'scenario.json')) &&
+        existsSync(join(dir, 'decision.json'))
+      );
+    })
+    .sort();
+}
+
+export function loadScenario(name) {
+  const fixtureDir = join(FIXTURES_DIR, name);
+  const scenario = JSON.parse(readFileSync(join(fixtureDir, 'scenario.json'), 'utf8'));
+  return { name, fixtureDir, scenario };
+}
+
+function overlayDirectory(src, dest) {
+  if (!existsSync(src)) return;
+  for (const entry of readdirSync(src, { withFileTypes: true })) {
+    const from = join(src, entry.name);
+    const to = join(dest, entry.name);
+    if (entry.isDirectory()) {
+      mkdirSync(to, { recursive: true });
+      overlayDirectory(from, to);
+    } else {
+      mkdirSync(dirname(to), { recursive: true });
+      cpSync(from, to);
+    }
+  }
+}
+
+export function setupScenario(name) {
+  const { fixtureDir, scenario } = loadScenario(name);
+  const tmp = join(
+    ROOT,
+    '.tmp-test',
+    `${name}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  );
+  mkdirSync(tmp, { recursive: true });
+
+  cpSync(join(fixtureDir, 'clean'), tmp, { recursive: true });
+  git(['init'], tmp);
+  git(['config', 'user.email', 'test@example.com'], tmp);
+  git(['config', 'user.name', 'Test User'], tmp);
+  git(['add', '.'], tmp);
+  git(['commit', '-m', scenario.commitMessage ?? `Initial ${name} base`], tmp);
+  const cleanBaseSha = git(['rev-parse', 'HEAD'], tmp);
+
+  const recoveryDir = join(tmp, '.claude', 'recovery');
+  mkdirSync(recoveryDir, { recursive: true });
+  writeFileSync(
+    join(recoveryDir, 'scenario.json'),
+    `${JSON.stringify({ cleanBaseSha, name }, null, 2)}\n`,
+  );
+
+  const promptPath = join(fixtureDir, 'evidence', 'original-prompt.txt');
+  const prompt = existsSync(promptPath) ? readFileSync(promptPath, 'utf8').trim() : '';
+  writeFileSync(
+    join(recoveryDir, 'original-outcome.json'),
+    `${JSON.stringify({ text: prompt }, null, 2)}\n`,
+  );
+
+  for (const file of ['boundaries.json', 'findings.json']) {
+    const src = join(fixtureDir, 'evidence', file);
+    if (existsSync(src)) {
+      cpSync(src, join(recoveryDir, file));
+    }
+  }
+
+  if (prompt) {
+    writeFileSync(
+      join(recoveryDir, 'prompts.jsonl'),
+      `${JSON.stringify({
+        label: 'Observed evidence',
+        timestamp: new Date().toISOString(),
+        prompt,
+      })}\n`,
+    );
+  }
+
+  overlayDirectory(join(fixtureDir, 'bad-attempt'), tmp);
+  cpSync(join(fixtureDir, 'decision.json'), join(recoveryDir, 'decision.json'));
+
+  const snapshots = {};
+  for (const entry of scenario.expectations?.originalFilesUnchanged ?? []) {
+    snapshots[entry.path] = readFileSync(join(tmp, entry.path), 'utf8');
+  }
+
+  return { tmp, cleanBaseSha, fixtureDir, scenario, snapshots };
+}
+
+export function cleanupScenario(tmp) {
+  if (!tmp || !existsSync(tmp)) return;
+  spawnSync('git', ['worktree', 'prune'], { cwd: tmp, encoding: 'utf8' });
+  rmSync(tmp, { recursive: true, force: true });
+}
+
+function assertFileExpectations(root, files) {
+  for (const entry of files ?? []) {
+    const abs = join(root, entry.path);
+    if (entry.exists === false) {
+      assert.equal(existsSync(abs), false, `expected missing: ${entry.path}`);
+      continue;
+    }
+    assert.ok(existsSync(abs), `expected file: ${entry.path}`);
+    if (entry.matches || entry.doesNotMatch) {
+      const content = readFileSync(abs, 'utf8');
+      for (const pattern of entry.matches ?? []) {
+        assert.match(content, new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+      }
+      for (const pattern of entry.doesNotMatch ?? []) {
+        assert.doesNotMatch(content, new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+      }
+    }
+  }
+}
+
+/**
+ * Full recovery pipeline for one scenario fixture.
+ * Returns artifacts for scenario-specific assertions.
+ */
+export function runScenarioE2E(name, { worktreeName = `recovery-${name}` } = {}) {
+  const ctx = setupScenario(name);
+  const { tmp, cleanBaseSha, scenario, snapshots } = ctx;
+  const expect = scenario.expectations ?? {};
+
+  try {
+    const capture = runRecovery(['capture'], tmp);
+    assert.equal(capture.ok, true);
+    assert.equal(capture.evidence.label, 'Observed evidence');
+    assert.equal(capture.evidence.sourceSha, git(['rev-parse', 'HEAD'], tmp));
+    assert.equal(capture.evidence.sourceSha, cleanBaseSha);
+
+    for (const pattern of expect.observedDiffPatterns ?? []) {
+      assert.match(
+        `${capture.evidence.gitDiff}\n${capture.evidence.untrackedSnapshot ?? ''}`,
+        new RegExp(pattern),
+      );
+    }
+
+    const inspect = runRecovery(['inspect'], tmp);
+    assert.equal(inspect.view.interfaceDiff.label, 'Observed evidence');
+    assert.ok(inspect.note.includes('not automatic semantic verdicts'));
+
+    const preview = runRecovery(['preview', '--decision-file', '.claude/recovery/decision.json'], tmp);
+    const manifest = preview.manifest;
+    const keptPaths = manifest.selectedPatches.map((p) => p.path);
+    const discardedPaths = manifest.discardedPatches.map((p) => p.path);
+
+    for (const file of expect.keepFiles ?? []) {
+      assert.ok(keptPaths.includes(file), `expected keep: ${file}`);
+    }
+    for (const file of expect.discardFiles ?? []) {
+      assert.ok(discardedPaths.includes(file), `expected discard: ${file}`);
+      assert.ok(!keptPaths.includes(file), `must not keep discarded: ${file}`);
+    }
+
+    for (const fragment of expect.continuationMustInclude ?? []) {
+      assert.ok(
+        manifest.continuationContext.includes(fragment),
+        `continuation missing: ${fragment}`,
+      );
+    }
+
+    runRecovery(['approve', '--decision-file', '.claude/recovery/decision.json'], tmp);
+    const wt = runRecovery(
+      ['create-worktree', '--base', cleanBaseSha, '--name', worktreeName],
+      tmp,
+    );
+    assert.ok(existsSync(wt.worktree.path));
+
+    const applied = runRecovery(
+      ['apply-selected-patches', '--manifest', '.claude/recovery/recovery-manifest.json'],
+      tmp,
+    );
+    if (expect.appliedPatches) {
+      assert.deepEqual(applied.applied, expect.appliedPatches);
+    }
+
+    const finalManifest = JSON.parse(
+      readFileSync(join(tmp, '.claude/recovery/recovery-manifest.json'), 'utf8'),
+    );
+    assertFileExpectations(finalManifest.worktreePath, expect.worktreeFiles);
+
+    for (const entry of expect.originalFilesUnchanged ?? []) {
+      const after = readFileSync(join(tmp, entry.path), 'utf8');
+      assert.equal(after, snapshots[entry.path], `original worktree changed: ${entry.path}`);
+      for (const pattern of entry.matches ?? []) {
+        assert.match(after, new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+      }
+    }
+
+    const approvedHook = createSessionHookOutput(SESSION_HOOK, {
+      hook_event_name: 'SessionStart',
+      source: 'startup',
+      cwd: tmp,
+      session_id: `${name}-approved`,
+    });
+    assert.ok(approvedHook, 'approved SessionStart should inject additionalContext');
+    for (const fragment of expect.hookContextMustInclude ?? []) {
+      assert.match(approvedHook.hookSpecificOutput.additionalContext, new RegExp(fragment));
+    }
+
+    const secondHook = createSessionHookOutput(SESSION_HOOK, {
+      hook_event_name: 'SessionStart',
+      source: 'startup',
+      cwd: tmp,
+      session_id: `${name}-second`,
+    });
+    assert.equal(secondHook, null, 'must not inject an already-injected contract');
+
+    // Wipe approved pending so launch-instructions exercises manual fallback.
+    const pendingPath = join(tmp, '.claude/recovery/pending-contract.json');
+    if (existsSync(pendingPath)) {
+      const pending = JSON.parse(readFileSync(pendingPath, 'utf8'));
+      pending.approved = false;
+      writeFileSync(pendingPath, `${JSON.stringify(pending, null, 2)}\n`);
+    }
+
+    const instructions = runRecovery(
+      ['launch-instructions', '--manifest', '.claude/recovery/recovery-manifest.json'],
+      tmp,
+    );
+    assert.ok(instructions.manualFallback);
+    assert.ok(instructions.recommendedLaunchCommand.includes('claude --plugin-dir'));
+    for (const fragment of expect.manualFallbackMustInclude ?? []) {
+      const haystack = `${instructions.manualFallback.contractText}\n${instructions.manualFallback.instruction}`;
+      assert.ok(haystack.includes(fragment), `manual fallback missing: ${fragment}`);
+    }
+
+    return {
+      ...ctx,
+      capture,
+      inspect,
+      manifest: finalManifest,
+      applied,
+      instructions,
+      approvedHook,
+    };
+  } catch (err) {
+    cleanupScenario(tmp);
+    throw err;
+  }
+}
