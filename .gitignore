@@ -145,3 +145,5 @@ vite.config.ts.timestamp-*
 # claude-recovery test artifacts
 .tmp-test/
 .claude/recovery-worktrees/
+evals/recordings/
+.claude-eval-config/

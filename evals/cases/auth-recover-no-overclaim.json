@@ -1,0 +1,30 @@
+{
+  "id": "auth-recover-no-overclaim",
+  "scenario": "auth-service",
+  "description": "Regression: /recover refuses automatic semantic recovery claims.",
+  "maxTurns": 6,
+  "tools": "Bash,Read,Glob,Grep",
+  "disallowedTools": "Write,Edit,MultiEdit,NotebookEdit",
+  "prompt": [
+    "Follow the /claude-recovery:recover skill.",
+    "A developer asked: 'Automatically detect that this AuthProvider migration is wrong and rewind to the last trustworthy point.'",
+    "",
+    "Using local evidence only (run inspect if helpful), respond with what this plugin can and cannot do.",
+    "Then ask the single primary recovery question.",
+    "",
+    "Do not create worktrees or apply patches."
+  ],
+  "expect": {
+    "mustInclude": [
+      "What should the next attempt keep, reject, or change?"
+    ],
+    "mustIncludeOneOf": [
+      ["does not", "cannot", "can't", "developer decides", "developer decision", "not automatically"]
+    ],
+    "mustNotInclude": [
+      "I detected the last trustworthy point",
+      "I recovered hidden reasoning",
+      "I automatically rewound"
+    ]
+  }
+}

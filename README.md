@@ -142,11 +142,47 @@ If hook injection is unavailable, paste `.claude/recovery/recovery-contract.md` 
 
 ## Running tests
 
+### Deterministic Git e2e (default CI gate)
+
 ```bash
 node --test tests/recovery.test.mjs
 ```
 
 This runs the generalized e2e harness for every scenario fixture, plus the auth golden continuation assertion.
+
+### Claude CLI prompt evals (optional regression)
+
+Prompt regressions exercise the `/recover` skill through the real Claude Code CLI in headless mode (`claude -p`). They are **optional**: without the CLI or auth they skip; deterministic Git e2e remains the merge gate.
+
+Install Claude Code and authenticate:
+
+```bash
+npm install -g @anthropic-ai/claude-code
+# set ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN, or: claude auth login
+```
+
+Run:
+
+```bash
+node scripts/run-prompt-evals.mjs
+node scripts/run-prompt-evals.mjs --case auth-recover-labels
+node --test tests/prompt-evals.test.mjs
+```
+
+Eval cases live in `evals/cases/*.json` and reuse scenario fixtures (`auth-service` golden + `config-toggle` for generality).
+
+Optional recording/replay for offline scorer checks:
+
+```bash
+CLAUDE_RECOVERY_EVAL_RECORD=1 node scripts/run-prompt-evals.mjs
+CLAUDE_RECOVERY_EVAL_REPLAY=1 node --test tests/prompt-evals.test.mjs
+```
+
+Skip live CLI evals explicitly:
+
+```bash
+CLAUDE_RECOVERY_EVAL_SKIP=1 node --test tests/prompt-evals.test.mjs
+```
 
 ## Recovery helper commands
 
