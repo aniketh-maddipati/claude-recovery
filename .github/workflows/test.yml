@@ -1,0 +1,43 @@
+name: test
+
+on:
+  push:
+    branches: [main, 'cursor/**']
+  pull_request:
+
+jobs:
+  unit-and-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Deterministic recovery e2e
+        run: node --test tests/recovery.test.mjs
+
+      - name: Mechanical recovery smoke
+        run: node scripts/run-manual-test.mjs
+
+      - name: Prompt eval harness (scorer only, no Claude auth)
+        run: CLAUDE_RECOVERY_EVAL_SKIP=1 node --test tests/prompt-evals.test.mjs
+
+  prompt-evals:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && vars.RUN_CLAUDE_PROMPT_EVALS == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Live prompt evals
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: node scripts/run-manual-test.mjs --eval

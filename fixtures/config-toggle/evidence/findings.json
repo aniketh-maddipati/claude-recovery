@@ -1,0 +1,8 @@
+[
+  {
+    "id": "default-false",
+    "label": "Observed evidence",
+    "title": "default-false finding",
+    "detail": "Missing flags must return false, not throw (observed during manual check)."
+  }
+]

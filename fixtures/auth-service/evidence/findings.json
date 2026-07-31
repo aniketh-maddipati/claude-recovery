@@ -1,0 +1,8 @@
+[
+  {
+    "id": "expired-token",
+    "label": "Observed evidence",
+    "title": "expired-token finding",
+    "detail": "Tokens prefixed with 'expired' fail authentication with reason 'invalid or expired token' (observed during manual edge-case check)."
+  }
+]

@@ -1,0 +1,35 @@
+{
+  "userDecision": "Keep the smoke test and default-false finding. Reject the getConfig rename. Fresh session from clean base.",
+  "originalOutcome": "Add a feature flag reader without renaming the exported getConfig API.",
+  "pinnedBoundaries": [
+    "Do not rename the exported getConfig API."
+  ],
+  "keep": {
+    "files": ["tests/config-smoke.test.mjs"],
+    "tests": ["tests/config-smoke.test.mjs"],
+    "findings": [
+      "default-false finding: Missing flags must return false, not throw (observed during manual check)."
+    ]
+  },
+  "discard": {
+    "files": ["src/config.mjs"],
+    "assumptions": ["getConfig rename"]
+  },
+  "continuation": {
+    "outcome": "Add a feature flag reader.",
+    "boundaries": [
+      "Do not rename the exported getConfig API."
+    ],
+    "carryForward": [
+      "config smoke test: tests/config-smoke.test.mjs",
+      "default-false finding: Missing flags must return false, not throw (observed during manual check)."
+    ],
+    "rejectedApproach": "Do not reintroduce the getConfig rename."
+  },
+  "next": {
+    "baseSha": "clean-base",
+    "contextMode": "fresh",
+    "approach": "wrap getConfig with a flag helper",
+    "verificationCommand": "node --test tests/config-smoke.test.mjs"
+  }
+}

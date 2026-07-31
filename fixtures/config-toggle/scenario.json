@@ -1,0 +1,44 @@
+{
+  "name": "config-toggle",
+  "description": "Bad public API rename of getConfig; keep research finding and smoke test; discard renamed API.",
+  "commitMessage": "Initial config-toggle base",
+  "expectations": {
+    "observedDiffPatterns": ["loadSettings", "getConfig"],
+    "keepFiles": ["tests/config-smoke.test.mjs"],
+    "discardFiles": ["src/config.mjs"],
+    "appliedPatches": ["tests/config-smoke.test.mjs"],
+    "worktreeFiles": [
+      {
+        "path": "src/config.mjs",
+        "matches": ["getConfig"],
+        "doesNotMatch": ["loadSettings"]
+      },
+      {
+        "path": "tests/config-smoke.test.mjs",
+        "exists": true
+      }
+    ],
+    "originalFilesUnchanged": [
+      {
+        "path": "src/config.mjs",
+        "matches": ["loadSettings"]
+      }
+    ],
+    "continuationMustInclude": [
+      "Outcome: Add a feature flag reader.",
+      "Do not rename the exported getConfig API.",
+      "config smoke test: tests/config-smoke.test.mjs",
+      "default-false finding",
+      "Do not reintroduce the getConfig rename.",
+      "Run node --test tests/config-smoke.test.mjs"
+    ],
+    "hookContextMustInclude": [
+      "Recovery Contract",
+      "Do not rename the exported getConfig API"
+    ],
+    "manualFallbackMustInclude": [
+      "Do not rename the exported getConfig API",
+      "Paste recovery-contract.md"
+    ]
+  }
+}

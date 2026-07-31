@@ -1,0 +1,27 @@
+{
+  "id": "config-toggle-labels",
+  "scenario": "config-toggle",
+  "description": "Generic scenario regression: same /recover labeling flow outside auth-service.",
+  "maxTurns": 8,
+  "tools": "Bash,Read,Glob,Grep",
+  "disallowedTools": "Write,Edit,MultiEdit,NotebookEdit",
+  "prompt": [
+    "Follow the /claude-recovery:recover skill.",
+    "This repository has a bad getConfig rename attempt.",
+    "Complete ONLY steps 1-3: inspect evidence, show a labeled compact view, ask the primary keep/reject/change question, then stop.",
+    "Do not create a worktree or apply patches."
+  ],
+  "expect": {
+    "mustInclude": [
+      "Observed evidence",
+      "What should the next attempt keep, reject, or change?"
+    ],
+    "mustIncludeOneOf": [
+      ["getConfig", "loadSettings", "feature flag"]
+    ],
+    "mustNotInclude": [
+      "I automatically determined this attempt is wrong",
+      "created the recovery worktree"
+    ]
+  }
+}
