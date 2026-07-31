@@ -28,6 +28,7 @@ Commands:
   inspect
   preview --decision-file <path>
   approve --decision-file <path>
+  finalize --decision-file <path> [--name <name>] [--base <sha>]
   create-worktree --base <sha> --name <name>
   apply-selected-patches --manifest <path>
   launch-instructions --manifest <path>
@@ -632,6 +633,27 @@ function launchInstructions(cwd, manifestPath) {
   return output;
 }
 
+function finalizeRecovery(cwd, decisionPath, { baseSha, name } = {}) {
+  const decision = readJson(decisionPath);
+  const resolvedBase = baseSha ?? resolveBaseSha(cwd, decision);
+  const worktreeName = name ?? `recovery-${Date.now()}`;
+
+  const manifest = approveRecovery(cwd, decisionPath);
+  const worktree = createWorktree(cwd, resolvedBase, worktreeName);
+  const manifestPath = join(recoveryRoot(cwd), 'recovery-manifest.json');
+  updateManifestWorktree(cwd, manifestPath, worktree);
+  const applied = applySelectedPatches(cwd, manifestPath);
+  const launch = launchInstructions(cwd, manifestPath);
+
+  return {
+    ok: true,
+    manifest: readJson(manifestPath),
+    worktree,
+    applied,
+    launch,
+  };
+}
+
 function main() {
   const cwd = process.cwd();
   const { command, options } = parseArgs(process.argv.slice(2));
@@ -658,6 +680,15 @@ function main() {
         if (!options['decision-file']) throw new Error('--decision-file is required');
         const manifest = approveRecovery(cwd, resolve(cwd, options['decision-file']));
         console.log(JSON.stringify({ ok: true, manifest }, null, 2));
+        break;
+      }
+      case 'finalize': {
+        if (!options['decision-file']) throw new Error('--decision-file is required');
+        const result = finalizeRecovery(cwd, resolve(cwd, options['decision-file']), {
+          baseSha: options.base,
+          name: options.name,
+        });
+        console.log(JSON.stringify(result, null, 2));
         break;
       }
       case 'create-worktree': {

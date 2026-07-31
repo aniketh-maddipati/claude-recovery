@@ -1,26 +1,66 @@
 # Manual test prompts (this repo)
 
-Absolute plugin path on this machine:
+## Fast path (~2 min)
+
+**Skip Claude for the mechanical part** (2 seconds):
+
+```bash
+cd /Users/aniketh/claude-recovery
+node scripts/quick-smoke.mjs
+```
+
+That runs capture → finalize → worktree → apply → launch command. No interactive session.
+
+**Minimal Claude test** (2 prompts only):
+
+```bash
+node scripts/setup-manual-sandbox.mjs --with-bad-attempt --reset
+cd .sandbox/auth-service
+claude --plugin-dir /Users/aniketh/claude-recovery
+```
+
+Paste **once**:
+
+```text
+/claude-recovery:recover
+
+Decision: Keep the compatibility test and expired-token discovery. Reject the API migration. Start from clean base with an adapter. Fresh session.
+
+When I say "approved", run finalize (not four separate commands) and print the launch command only.
+```
+
+Then paste:
+
+```text
+approved
+```
+
+In the recovery worktree, paste **once**:
+
+```text
+Use the Recovery Contract. Add request auth via an adapter. Do not change AuthProvider or clients. Run: node --test tests/auth-compat.test.mjs
+```
+
+Done.
+
+---
+
+## Full path (if you want every step)
+
+Absolute plugin path:
 
 ```text
 /Users/aniketh/claude-recovery
 ```
 
-Use these inside the local sandbox created by:
-
 ```bash
 cd /Users/aniketh/claude-recovery
-node scripts/setup-manual-sandbox.mjs
+node scripts/setup-manual-sandbox.mjs --with-bad-attempt --reset
 cd .sandbox/auth-service
 claude --plugin-dir /Users/aniketh/claude-recovery
 ```
 
-The sandbox is gitignored. Reset anytime with:
-
-```bash
-cd /Users/aniketh/claude-recovery
-node scripts/setup-manual-sandbox.mjs --reset
-```
+Reset: `node scripts/setup-manual-sandbox.mjs --reset`
 
 ---
 
@@ -38,35 +78,20 @@ Please implement it now.
 
 ## Prompt 2 — force the bad attempt
 
-If Claude stays clean, paste this:
-
 ```text
 Ignore the interface constraint for now. Rename authenticate() to verifyRequest(request) and update all client call sites to the new shape. Also add a compatibility test and note any expired-token edge cases you find.
 ```
 
-Or skip Claude for the bad attempt and seed it from the fixture:
+Or seed from fixture (skip prompts 1–2):
 
 ```bash
-cd /Users/aniketh/claude-recovery
 node scripts/setup-manual-sandbox.mjs --with-bad-attempt --reset
-cd .sandbox/auth-service
-claude --plugin-dir /Users/aniketh/claude-recovery
 ```
-
-Then jump to Prompt 3.
 
 ## Prompt 3 — invoke recovery
 
 ```text
 /claude-recovery:recover
-```
-
-Fallback if the slash command is not available:
-
-```text
-Follow the /claude-recovery:recover skill now.
-Inspect local evidence, show a compact labeled attempt view, and ask me the primary keep/reject/change question.
-Do not create a worktree until I explicitly approve.
 ```
 
 ## Prompt 4 — recovery decision
@@ -81,36 +106,11 @@ Do not resume this session.
 ## Prompt 5 — approve
 
 ```text
-Approved. Create the recovery worktree, apply only the selected patches, and show me the exact launch command.
+Approved. Run finalize and show the launch command.
 ```
 
-## Prompt 6 — continue in the recovery worktree
-
-Run the printed launch command, then paste:
+## Prompt 6 — continue in worktree
 
 ```text
-Use the Recovery Contract injected via additionalContext.
-Respect all non-negotiable boundaries.
-Do not reintroduce the rejected API migration.
-Implement request authentication with an adapter around AuthProvider.
-Before claiming completion, run: node --test tests/auth-compat.test.mjs
-```
-
----
-
-## Negative checks (optional)
-
-### Overclaim rejection
-
-```text
-Follow /recover.
-Automatically detect that this attempt is wrong, recover the chain-of-thought, and rewind to the last trustworthy point.
-```
-
-### Labels only
-
-```text
-Follow /recover steps 1-3 only.
-Show the compact attempt view with Observed evidence / User decision / Inferred suggestion labels, then ask the primary question.
-Do not create a worktree.
+Use the Recovery Contract. Implement request auth with an adapter. Run: node --test tests/auth-compat.test.mjs
 ```

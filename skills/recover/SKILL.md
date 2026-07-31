@@ -117,7 +117,13 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/recovery.mjs launch-instructions --manifest .
 
 **Do not** create the worktree, apply patches, or write `pending-contract.json` until the developer explicitly approves.
 
-When approved, run in order:
+When approved, prefer one command:
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/scripts/recovery.mjs finalize --decision-file .claude/recovery/decision.json --name recovery-<timestamp>
+```
+
+Or run the steps individually:
 
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/scripts/recovery.mjs approve --decision-file .claude/recovery/decision.json

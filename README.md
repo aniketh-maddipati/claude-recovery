@@ -172,6 +172,14 @@ If hook injection is unavailable, paste `.claude/recovery/recovery-contract.md` 
 
 ## Running tests
 
+### Quick smoke (fastest — ~2s, no Claude)
+
+```bash
+node scripts/quick-smoke.mjs
+```
+
+Runs full mechanical recovery on the auth fixture in one command.
+
 ### Deterministic Git e2e (default CI gate)
 
 ```bash
@@ -220,9 +228,7 @@ CLAUDE_RECOVERY_EVAL_SKIP=1 node --test tests/prompt-evals.test.mjs
 node scripts/recovery.mjs capture
 node scripts/recovery.mjs inspect
 node scripts/recovery.mjs preview --decision-file .claude/recovery/decision.json
-node scripts/recovery.mjs approve --decision-file .claude/recovery/decision.json
-node scripts/recovery.mjs create-worktree --base <sha> --name <name>
-node scripts/recovery.mjs apply-selected-patches --manifest .claude/recovery/recovery-manifest.json
+node scripts/recovery.mjs finalize --decision-file .claude/recovery/decision.json --name recovery-demo
 node scripts/recovery.mjs launch-instructions --manifest .claude/recovery/recovery-manifest.json
 ```
 
