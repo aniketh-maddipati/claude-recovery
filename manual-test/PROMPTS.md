@@ -2,46 +2,31 @@
 
 ## Fast path (~2 min)
 
-**Skip Claude for the mechanical part** (2 seconds):
+**One script — prompts baked in:**
 
 ```bash
 cd /Users/aniketh/claude-recovery
-node scripts/quick-smoke.mjs
+
+# mechanical only (~2s, no Claude)
+node scripts/run-manual-test.mjs
+
+# full skill prompts via Claude CLI (needs auth)
+node scripts/run-manual-test.mjs --claude
+
+# + implement in recovery worktree (slowest)
+node scripts/run-manual-test.mjs --claude --implement
+
+# setup sandbox + print prompts JSON for manual paste
+node scripts/run-manual-test.mjs --print-prompts
 ```
 
-That runs capture → finalize → worktree → apply → launch command. No interactive session.
+Prompts live in `manual-test/prompts.json`. Edit there to change what Claude receives.
 
-**Minimal Claude test** (2 prompts only):
+**Mechanical-only shortcut:**
 
 ```bash
-node scripts/setup-manual-sandbox.mjs --with-bad-attempt --reset
-cd .sandbox/auth-service
-claude --plugin-dir /Users/aniketh/claude-recovery
+node scripts/quick-smoke.mjs
 ```
-
-Paste **once**:
-
-```text
-/claude-recovery:recover
-
-Decision: Keep the compatibility test and expired-token discovery. Reject the API migration. Start from clean base with an adapter. Fresh session.
-
-When I say "approved", run finalize (not four separate commands) and print the launch command only.
-```
-
-Then paste:
-
-```text
-approved
-```
-
-In the recovery worktree, paste **once**:
-
-```text
-Use the Recovery Contract. Add request auth via an adapter. Do not change AuthProvider or clients. Run: node --test tests/auth-compat.test.mjs
-```
-
-Done.
 
 ---
 

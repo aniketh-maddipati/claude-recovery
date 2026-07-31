@@ -178,7 +178,15 @@ If hook injection is unavailable, paste `.claude/recovery/recovery-contract.md` 
 node scripts/quick-smoke.mjs
 ```
 
-Runs full mechanical recovery on the auth fixture in one command.
+### Encapsulated manual test (prompts in script)
+
+```bash
+node scripts/run-manual-test.mjs              # mechanical
+node scripts/run-manual-test.mjs --claude     # + Claude CLI prompts
+node scripts/run-manual-test.mjs --print-prompts
+```
+
+Prompts are defined in `manual-test/prompts.json`.
 
 ### Deterministic Git e2e (default CI gate)
 
