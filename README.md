@@ -1,248 +1,123 @@
 # claude-recovery
 
-A Claude Code plugin that helps developers recover from untrustworthy attempts by preserving chosen code, decisions, and evidence in a clean Git worktree continuation.
+A Claude Code plugin with one developer-invoked action: `/recover`. When an attempt feels untrustworthy, it helps you inspect local evidence, write down what to keep or reject, and continue in a clean Git worktree.
 
-**Requires Git with at least one commit.**
+**Requires:** Git with at least one commit.
 
-**Tested with Claude Code 2.1.x.** See [LIMITATIONS.md](LIMITATIONS.md) for hook and scope caveats.
+**Status:** v0.1.0. Tested manually against Claude Code 2.1.x. Not a marketplace plugin yet.
 
-## What this is
+Full scope and caveats: [LIMITATIONS.md](LIMITATIONS.md).
 
-When a Claude Code attempt becomes untrustworthy, `/recover` helps you:
+## What it does
 
-1. Inspect **observable local evidence** (Git state, commands, test output, timestamps)
-2. Decide what to **keep, reject, or change**
-3. Review an editable **Recovery Contract**
-4. Create an isolated recovery worktree with only selected patches applied
-5. Start a fresh Claude Code session with approved continuation context
+1. Records local evidence (prompts, Bash output, Git state) under `.claude/recovery/`.
+2. Guides you through `/claude-recovery:recover` to review that evidence and answer one question: *What should the next attempt keep, reject, or change?*
+3. Writes a Recovery Contract you must approve before anything is applied.
+4. Creates an isolated worktree, applies only the file patches you selected, and leaves the original tree untouched.
+5. Prints the exact command for you to start Claude Code in the worktree.
 
-## What this is not
+Evidence is labeled **Observed evidence**, **User decision**, or **Inferred suggestion**. Only the first category is treated as factual input from the machine.
 
-This plugin does **not**:
+## What it does not do
 
-- Automatically decide an attempt is wrong
-- Recover hidden chain-of-thought
-- Determine the last trustworthy point
-- Detect semantic truth automatically
-- Invoke `/clear`, move sessions, or silently launch interactive Claude Code
-- Replace Git or act as automatic semantic recovery
+- Decide that an attempt is wrong
+- Recover chain-of-thought or pick the "last good" point for you
+- Invoke `/clear`, move your session, or start interactive Claude Code on your behalf
+- Replace Git
 
-The developer makes the recovery decision.
+You make the recovery decision. The plugin handles the handoff.
 
-## Installation (local development)
+SessionStart contract injection is best-effort. On some Claude Code builds, plugin hooks may not surface `additionalContext` to the model ([upstream issue #16538](https://github.com/anthropics/claude-code/issues/16538)). If injection fails, paste `.claude/recovery/recovery-contract.md` manually. See [LIMITATIONS.md](LIMITATIONS.md).
 
-From this repository root:
+## Install
+
+From this repository:
 
 ```bash
-claude --plugin-dir .
+claude --plugin-dir /path/to/claude-recovery
 ```
 
-The recover skill is exposed as `/claude-recovery:recover` (plugin namespace + skill folder name).
+Skill: `/claude-recovery:recover`
 
-## Manual test in this repo
-
-No external project needed. Create a disposable sandbox from the auth fixture:
+## Typical flow
 
 ```bash
-cd /Users/aniketh/claude-recovery
+# in your project (during /recover, or directly)
+node /path/to/claude-recovery/scripts/recovery.mjs capture
+node /path/to/claude-recovery/scripts/recovery.mjs inspect
 
-# clean base only — you drive the bad attempt with prompts
-node scripts/setup-manual-sandbox.mjs
+# after you answer the keep/reject/change question and approve
+node /path/to/claude-recovery/scripts/recovery.mjs finalize \
+  --decision-file .claude/recovery/decision.json \
+  --name recovery-$(date +%s)
 
-# or seed the bad attempt immediately
+node /path/to/claude-recovery/scripts/recovery.mjs verify-boundaries \
+  --manifest .claude/recovery/recovery-manifest.json
+
+node /path/to/claude-recovery/scripts/recovery.mjs launch-instructions \
+  --manifest .claude/recovery/recovery-manifest.json
+```
+
+Then run the printed `cd ... && claude ...` command yourself in the recovery worktree.
+
+v1 applies **whole-file patches only**. There is no hunk picker.
+
+## Try it in this repo
+
+No external project required:
+
+```bash
+node scripts/run-manual-test.mjs          # ~2s, mechanical only
+node scripts/quick-smoke.mjs                # same pipeline, minimal output
 node scripts/setup-manual-sandbox.mjs --with-bad-attempt --reset
-
-cd .sandbox/auth-service
-claude --plugin-dir /Users/aniketh/claude-recovery
+cd .sandbox/auth-service && claude --plugin-dir ..
 ```
 
-Copy-paste prompts: [`manual-test/PROMPTS.md`](manual-test/PROMPTS.md)
+Prompts for interactive runs: [manual-test/PROMPTS.md](manual-test/PROMPTS.md) (also baked into `run-manual-test.mjs --claude`).
 
-Reset the sandbox anytime:
+Example scenario: `fixtures/auth-service/` (bad API migration; keep compat test; reject client changes).
 
-```bash
-cd /Users/aniketh/claude-recovery
-node scripts/setup-manual-sandbox.mjs --reset
-```
+## Tests
 
-## How `/recover` works
-
-1. **Capture & inspect** — hooks record submitted prompts and Bash command evidence under `.claude/recovery/`. Run:
-
-   ```bash
-   node scripts/recovery.mjs capture
-   node scripts/recovery.mjs inspect
-   ```
-
-2. **Review** — Claude shows a compact attempt view labeled as *Observed evidence*, *User decision*, or *Inferred suggestion*.
-
-3. **Decide** — You answer: *What should the next attempt keep, reject, or change?*
-
-4. **Contract** — A Recovery Contract is written to:
-   - `.claude/recovery/recovery-contract.md`
-   - `.claude/recovery/recovery-manifest.json`
-
-5. **Approve & apply** — After explicit approval:
-   - Recovery worktree is created (`git worktree add`)
-   - Only selected patches are applied (`git apply` or full-file copy for new files)
-   - Original worktree is never modified
-
-6. **Launch manually** — The plugin prints an exact command for you to run:
-
-   ```bash
-   node scripts/recovery.mjs launch-instructions --manifest .claude/recovery/recovery-manifest.json
-   ```
-
-   When `pending-contract.json` is approved, the `SessionStart` hook injects the contract via `additionalContext`.
-
-## End-to-end testing
-
-Proper e2e coverage is **scenario-driven**, not hard-coded to one product example.
-
-Each fixture under `fixtures/<name>/` declares a recovery story:
-
-```text
-fixtures/<name>/
-  scenario.json          # expectations for the full pipeline
-  clean/                 # committed clean base
-  bad-attempt/           # overlay after the base commit
-  evidence/              # prompt, boundaries, findings
-  decision.json          # developer keep/discard/next choices
-```
-
-The harness in `tests/harness/scenario-e2e.mjs` runs every discovered scenario through:
-
-`capture → inspect → preview → approve → create-worktree → apply-selected-patches → SessionStart hook → launch-instructions`
-
-Assertions come from `scenario.json` (`keepFiles`, `discardFiles`, worktree contents, continuation fragments, hook/manual fallback checks). The original worktree must remain unchanged.
-
-### Auth golden case
-
-`fixtures/auth-service/` remains the product golden scenario:
-
-- **Original request:** Add request authentication while preserving `AuthProvider` and avoiding client migration
-- **Bad attempt:** Changes `AuthProvider.authenticate()` → `verifyRequest()`, migrates clients
-- **Worth keeping:** `tests/auth-compat.test.mjs`, expired-token edge-case finding
-- **Recovery choice:** Reject migration, start from clean base, use adapter, fresh session
-
-A dedicated test also asserts the **exact** continuation context text for auth.
-
-`fixtures/config-toggle/` is a second minimal scenario proving the harness is not auth-specific.
-
-### Adding a new scenario
-
-1. Copy an existing fixture directory.
-2. Fill `clean/`, `bad-attempt/`, `evidence/`, `decision.json`.
-3. Write `scenario.json` expectations.
-4. Run `node --test tests/recovery.test.mjs` — the new scenario is auto-discovered.
-
-## What is captured locally
-
-Under `.claude/recovery/` (never sent remotely):
-
-| File | Content |
-|------|---------|
-| `prompts.jsonl` | Submitted task prompts |
-| `commands.jsonl` | Bash commands and output |
-| `evidence.json` | Git SHA, status, diff, timestamps |
-| `findings.json` | Recorded research/edge-case notes |
-| `recovery-manifest.json` | Selected/discarded patches, contract metadata |
-| `pending-contract.json` | Approved contract for SessionStart injection |
-
-## What the plugin does not know
-
-- Whether code is semantically correct
-- What Claude was "thinking"
-- Which commit was "last good" without your explicit base SHA choice
-- How to resume or fork your current interactive session programmatically
-
-## Worktree SessionStart seeding
-
-`SessionStart` reads `.claude/recovery/pending-contract.json` from the **session cwd**. Because the launch command starts Claude inside the recovery worktree, `create-worktree` seeds the approved pending contract (plus `recovery-contract.md`) into that worktree. Leaving the contract only in the source tree causes a silent no-injection.
-
-## Manual step (v1)
-
-After recovery setup, **you** run the displayed launch command in the recovery worktree. The plugin cannot start a new interactive Claude Code session on your behalf.
-
-Example shape:
-
-```bash
-cd .claude/recovery-worktrees/recovery-<name> && claude --plugin-dir /path/to/claude-recovery -p "Use the Recovery Contract injected via additionalContext..."
-```
-
-If hook injection is unavailable, paste `.claude/recovery/recovery-contract.md` manually.
-
-## Running tests
-
-### Quick smoke (fastest — ~2s, no Claude)
-
-```bash
-node scripts/quick-smoke.mjs
-```
-
-### Encapsulated manual test (prompts in script)
-
-```bash
-node scripts/run-manual-test.mjs              # mechanical
-node scripts/run-manual-test.mjs --claude     # + Claude CLI prompts
-node scripts/run-manual-test.mjs --print-prompts
-```
-
-Prompts are defined in `manual-test/prompts.json`.
-
-### Deterministic Git e2e (default CI gate)
+CI runs these on every push:
 
 ```bash
 node --test tests/recovery.test.mjs
-```
-
-This runs the generalized e2e harness for every scenario fixture, plus the auth golden continuation assertion.
-
-### Claude CLI prompt evals (optional regression)
-
-Prompt regressions exercise the `/recover` skill through the real Claude Code CLI in headless mode (`claude -p`). They are **optional**: without the CLI or auth they skip; deterministic Git e2e remains the merge gate.
-
-Install Claude Code and authenticate:
-
-```bash
-npm install -g @anthropic-ai/claude-code
-# set ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN, or: claude auth login
-```
-
-Run:
-
-```bash
-node scripts/run-prompt-evals.mjs
-node scripts/run-prompt-evals.mjs --case auth-recover-labels
-node --test tests/prompt-evals.test.mjs
-```
-
-Eval cases live in `evals/cases/*.json` and reuse scenario fixtures (`auth-service` golden + `config-toggle` for generality).
-
-Optional recording/replay for offline scorer checks:
-
-```bash
-CLAUDE_RECOVERY_EVAL_RECORD=1 node scripts/run-prompt-evals.mjs
-CLAUDE_RECOVERY_EVAL_REPLAY=1 node --test tests/prompt-evals.test.mjs
-```
-
-Skip live CLI evals explicitly:
-
-```bash
+node scripts/quick-smoke.mjs
 CLAUDE_RECOVERY_EVAL_SKIP=1 node --test tests/prompt-evals.test.mjs
 ```
 
-## Recovery helper commands
+Optional live skill checks (need Claude Code CLI + auth):
 
 ```bash
-node scripts/recovery.mjs capture
-node scripts/recovery.mjs inspect
-node scripts/recovery.mjs preview --decision-file .claude/recovery/decision.json
-node scripts/recovery.mjs finalize --decision-file .claude/recovery/decision.json --name recovery-demo
-node scripts/recovery.mjs verify-boundaries --manifest .claude/recovery/recovery-manifest.json
-node scripts/recovery.mjs launch-instructions --manifest .claude/recovery/recovery-manifest.json
+node scripts/run-prompt-evals.mjs
+node scripts/run-manual-test.mjs --claude
 ```
+
+Add scenarios under `fixtures/<name>/` with `scenario.json` and `decision.json`. The e2e harness auto-discovers them.
+
+## Helper commands
+
+| Command | Purpose |
+|---------|---------|
+| `capture` | Snapshot Git state and patches |
+| `inspect` | Compact attempt view |
+| `preview` | Build contract without applying |
+| `finalize` | Approve, worktree, apply, seed contract |
+| `verify-boundaries` | Compare boundary files to base SHA |
+| `launch-instructions` | Print manual launch command |
+
+## Files worth knowing
+
+| Path | Role |
+|------|------|
+| `.claude/recovery/evidence.json` | Captured Git state |
+| `.claude/recovery/recovery-contract.md` | Human-readable contract |
+| `.claude/recovery/recovery-manifest.json` | Machine-readable handoff |
+| `.claude/recovery/pending-contract.json` | Approved contract for SessionStart |
+
+All stay local. Nothing is sent remotely by this plugin.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE). Changes: [CHANGELOG.md](CHANGELOG.md).
