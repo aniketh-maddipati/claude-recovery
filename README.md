@@ -4,6 +4,8 @@ A Claude Code plugin that helps developers recover from untrustworthy attempts b
 
 **Requires Git with at least one commit.**
 
+**Tested with Claude Code 2.1.x.** See [LIMITATIONS.md](LIMITATIONS.md) for hook and scope caveats.
+
 ## What this is
 
 When a Claude Code attempt becomes untrustworthy, `/recover` helps you:
@@ -237,6 +239,7 @@ node scripts/recovery.mjs capture
 node scripts/recovery.mjs inspect
 node scripts/recovery.mjs preview --decision-file .claude/recovery/decision.json
 node scripts/recovery.mjs finalize --decision-file .claude/recovery/decision.json --name recovery-demo
+node scripts/recovery.mjs verify-boundaries --manifest .claude/recovery/recovery-manifest.json
 node scripts/recovery.mjs launch-instructions --manifest .claude/recovery/recovery-manifest.json
 ```
 

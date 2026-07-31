@@ -226,6 +226,15 @@ function main() {
     sandbox,
   );
 
+  log('verify', 'running verify-boundaries ...');
+  const boundaries = runRecovery(
+    ['verify-boundaries', '--manifest', '.claude/recovery/recovery-manifest.json'],
+    sandbox,
+  );
+  if (!boundaries.ok) {
+    throw new Error(`boundary verification failed: ${JSON.stringify(boundaries.checks)}`);
+  }
+
   const verify = verifyWorktree(options.scenario, finalized);
   if (!verify.ok) {
     throw new Error(`worktree verification failed: ${JSON.stringify(verify.checks)}`);
@@ -255,6 +264,7 @@ function main() {
     worktree: finalized.worktree.path,
     launch: finalized.launch.recommendedLaunchCommand,
     verify: verify.checks,
+    boundaries: boundaries.checks,
     stages: stages.map((s) => ({
       stage: s.stage,
       scoreOk: s.score?.ok ?? null,
