@@ -237,6 +237,12 @@ export function runScenarioE2E(name, { worktreeName = `recovery-${name}` } = {})
       assert.deepEqual(applied.applied, expect.appliedPatches);
     }
 
+    const boundaries = runRecovery(
+      ['verify-boundaries', '--manifest', '.claude/recovery/recovery-manifest.json'],
+      tmp,
+    );
+    assert.equal(boundaries.ok, true, JSON.stringify(boundaries.checks));
+
     const finalManifest = JSON.parse(
       readFileSync(join(tmp, '.claude/recovery/recovery-manifest.json'), 'utf8'),
     );

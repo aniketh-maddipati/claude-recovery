@@ -29,6 +29,7 @@ Commands:
   preview --decision-file <path>
   approve --decision-file <path>
   finalize --decision-file <path> [--name <name>] [--base <sha>]
+  verify-boundaries --manifest <path> [--worktree <path>]
   create-worktree --base <sha> --name <name>
   apply-selected-patches --manifest <path>
   launch-instructions --manifest <path>
@@ -413,6 +414,8 @@ function previewRecovery(cwd, decisionPath, { approved = false } = {}) {
 
   manifest.continuationContext = buildContinuationContext(decision, cwd, manifest);
   manifest.contractText = buildContractMarkdown(decision, manifest);
+  manifest.boundaryFiles = decision.boundaryFiles ?? decision.discard?.files ?? [];
+  manifest.forbiddenPatterns = decision.forbiddenPatterns ?? [];
 
   const root = ensureRecoveryDir(cwd);
   writeFileSync(join(root, 'recovery-contract.md'), `${manifest.contractText}\n`, 'utf8');
@@ -633,6 +636,86 @@ function launchInstructions(cwd, manifestPath) {
   return output;
 }
 
+function verifyBoundaries(cwd, manifestPath, { worktreePath: wtOverride } = {}) {
+  const manifest = readJson(manifestPath);
+  const wtPath = wtOverride ?? manifest.worktreePath;
+  if (!wtPath || !existsSync(wtPath)) {
+    throw new Error('Recovery worktree path missing. Pass --worktree or set manifest.worktreePath.');
+  }
+
+  const baseSha = manifest.baseSha;
+  if (!baseSha) {
+    throw new Error('manifest.baseSha is required for boundary verification.');
+  }
+
+  const filesToCheck = manifest.boundaryFiles ?? [];
+
+  const forbiddenPatterns = manifest.forbiddenPatterns ?? [];
+  const results = [];
+
+  for (const file of filesToCheck) {
+    const wtFile = join(wtPath, file);
+    if (!existsSync(wtFile)) {
+      results.push({ file, label: 'Observed evidence', ok: false, reason: 'missing in worktree' });
+      continue;
+    }
+    const wtContent = readFileSync(wtFile, 'utf8').replace(/\r\n/g, '\n').trimEnd();
+    const base = git(['show', `${baseSha}:${file}`], cwd);
+    if (!base.ok) {
+      results.push({
+        file,
+        label: 'Observed evidence',
+        ok: false,
+        reason: `not tracked at baseSha ${baseSha}: ${base.stderr}`,
+      });
+      continue;
+    }
+    const baseContent = base.stdout.replace(/\r\n/g, '\n').trimEnd();
+    const matches = wtContent === baseContent;
+    results.push({
+      file,
+      label: 'Observed evidence',
+      ok: matches,
+      reason: matches ? 'byte-identical to baseSha' : 'differs from baseSha',
+    });
+  }
+
+  const grepScope = join(wtPath, 'src');
+  if (existsSync(grepScope) && forbiddenPatterns.length > 0) {
+    for (const pattern of forbiddenPatterns) {
+      const hits = searchTreeForPattern(grepScope, pattern);
+      results.push({
+        pattern,
+        label: 'Observed evidence',
+        ok: hits.length === 0,
+        reason: hits.length === 0 ? 'not found under src/' : `found in: ${hits.join(', ')}`,
+      });
+    }
+  }
+
+  const ok = results.every((r) => r.ok);
+  const output = { ok, label: 'Observed evidence', baseSha, worktreePath: wtPath, checks: results };
+  writeJson(join(recoveryRoot(cwd), 'boundary-verification.json'), output);
+  return output;
+}
+
+function searchTreeForPattern(root, pattern) {
+  const hits = [];
+  const re = new RegExp(pattern);
+  function walk(dir) {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const abs = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(abs);
+      } else if (re.test(readFileSync(abs, 'utf8'))) {
+        hits.push(relative(root, abs));
+      }
+    }
+  }
+  walk(root);
+  return hits;
+}
+
 function finalizeRecovery(cwd, decisionPath, { baseSha, name } = {}) {
   const decision = readJson(decisionPath);
   const resolvedBase = baseSha ?? resolveBaseSha(cwd, decision);
@@ -711,6 +794,15 @@ function main() {
         if (!options.manifest) throw new Error('--manifest is required');
         const instructions = launchInstructions(cwd, resolve(cwd, options.manifest));
         console.log(JSON.stringify(instructions, null, 2));
+        break;
+      }
+      case 'verify-boundaries': {
+        if (!options.manifest) throw new Error('--manifest is required');
+        const report = verifyBoundaries(cwd, resolve(cwd, options.manifest), {
+          worktreePath: options.worktree ? resolve(cwd, options.worktree) : undefined,
+        });
+        console.log(JSON.stringify(report, null, 2));
+        if (!report.ok) process.exit(1);
         break;
       }
       default:

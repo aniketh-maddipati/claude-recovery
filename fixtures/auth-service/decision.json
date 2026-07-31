@@ -16,6 +16,7 @@
     "files": ["src/auth/provider.mjs", "src/clients/api-client.mjs"],
     "assumptions": ["API migration"]
   },
+  "forbiddenPatterns": ["verifyRequest"],
   "continuation": {
     "outcome": "Add request authentication.",
     "boundaries": [
