@@ -455,6 +455,48 @@ function createWorktree(cwd, baseSha, name) {
   return { path: wtPath, baseSha, name };
 }
 
+/**
+ * SessionStart hooks resolve pending-contract.json relative to the session cwd.
+ * Because recovery launches Claude inside the new worktree, the approved contract
+ * must be seeded there — not left only in the source worktree.
+ */
+function seedWorktreePendingContract(sourceCwd, worktreePath) {
+  const sourcePending = join(recoveryRoot(sourceCwd), 'pending-contract.json');
+  if (!existsSync(sourcePending)) {
+    return { seeded: false, reason: 'no pending-contract.json in source recovery dir' };
+  }
+
+  const pending = readJson(sourcePending);
+  if (!pending.approved) {
+    return { seeded: false, reason: 'source pending-contract.json is not approved' };
+  }
+
+  const wtRecovery = join(worktreePath, RECOVERY_DIR);
+  mkdirSync(wtRecovery, { recursive: true });
+
+  pending.worktreePath = worktreePath;
+  pending.seededFrom = sourcePending;
+  pending.seededAt = new Date().toISOString();
+  // Fresh worktree session has not injected yet.
+  delete pending.injectedAt;
+  delete pending.injectedFrom;
+
+  writeJson(join(wtRecovery, 'pending-contract.json'), pending);
+
+  for (const file of ['recovery-contract.md', 'recovery-manifest.json']) {
+    const src = join(recoveryRoot(sourceCwd), file);
+    if (existsSync(src)) {
+      copyFileSync(src, join(wtRecovery, file));
+    }
+  }
+
+  return {
+    seeded: true,
+    pendingContractPath: join(wtRecovery, 'pending-contract.json'),
+    worktreePath,
+  };
+}
+
 function applySelectedPatches(cwd, manifestPath) {
   const manifest = readJson(manifestPath);
   const wtPath = manifest.worktreePath;
@@ -523,13 +565,22 @@ function updateManifestWorktree(cwd, manifestPath, worktreeInfo) {
     pending.worktreePath = worktreeInfo.path;
     writeJson(pendingPath, pending);
   }
+
+  const seed = seedWorktreePendingContract(cwd, worktreeInfo.path);
+  manifest.pendingContractSeeded = seed.seeded;
+  manifest.worktreePendingContractPath = seed.pendingContractPath ?? null;
+  writeJson(manifestPath, manifest);
   return manifest;
 }
 
 function launchInstructions(cwd, manifestPath) {
   const manifest = readJson(manifestPath);
   const wtPath = manifest.worktreePath ?? '<worktree-path>';
-  const contractPath = join(recoveryRoot(cwd), 'pending-contract.json');
+  const worktreeContractPath = join(wtPath, RECOVERY_DIR, 'pending-contract.json');
+  const sourceContractPath = join(recoveryRoot(cwd), 'pending-contract.json');
+  const contractPath = existsSync(worktreeContractPath)
+    ? worktreeContractPath
+    : sourceContractPath;
   const hasPending = existsSync(contractPath) && readJson(contractPath).approved;
 
   const initialPrompt =
@@ -553,17 +604,20 @@ function launchInstructions(cwd, manifestPath) {
       ? {
           label: 'Inferred suggestion',
           detail:
-            'SessionStart hook injects approved pending-contract.json via additionalContext when Claude Code starts in the worktree.',
+            'SessionStart reads .claude/recovery/pending-contract.json from the worktree cwd (seeded at create-worktree) and injects it via additionalContext.',
+          pendingContractPath: contractPath,
         }
       : null,
     manualFallback: hasPending
       ? null
       : {
           label: 'Observed evidence',
-          contractFile: join(recoveryRoot(cwd), 'recovery-contract.md'),
+          contractFile: existsSync(join(wtPath, RECOVERY_DIR, 'recovery-contract.md'))
+            ? join(wtPath, RECOVERY_DIR, 'recovery-contract.md')
+            : join(recoveryRoot(cwd), 'recovery-contract.md'),
           contractText: manifest.continuationContext ?? manifest.contractText ?? '',
           instruction:
-            'No approved pending-contract.json found. Paste recovery-contract.md contents manually as the first message.',
+            'No approved pending-contract.json found in the worktree. Paste recovery-contract.md contents manually as the first message.',
         },
     recommendedLaunchCommand: recommended,
     alternateLaunchCommand: launchCommand,

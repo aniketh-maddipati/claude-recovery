@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   cleanupScenario,
@@ -81,6 +81,44 @@ test('session hook never injects unapproved pending contract', () => {
       session_id: 'unapproved',
     });
     assert.equal(output, null);
+  } finally {
+    cleanupScenario(tmp);
+  }
+});
+
+test('create-worktree seeds approved pending contract into recovery worktree cwd', () => {
+  const { tmp, cleanBaseSha } = setupScenario('auth-service');
+  try {
+    runRecovery(['capture'], tmp);
+    runRecovery(['approve', '--decision-file', '.claude/recovery/decision.json'], tmp);
+    const wt = runRecovery(
+      ['create-worktree', '--base', cleanBaseSha, '--name', 'seed-pending'],
+      tmp,
+    );
+
+    const seededPath = join(wt.worktree.path, '.claude', 'recovery', 'pending-contract.json');
+    const seeded = JSON.parse(readFileSync(seededPath, 'utf8'));
+    assert.equal(seeded.approved, true);
+    assert.match(seeded.contractText, /Do not change the exported AuthProvider interface/);
+
+    const injected = createSessionHookOutput(SESSION_HOOK, {
+      hook_event_name: 'SessionStart',
+      source: 'startup',
+      cwd: wt.worktree.path,
+      session_id: 'seeded-wt',
+    });
+    assert.ok(injected);
+    assert.match(
+      injected.hookSpecificOutput.additionalContext,
+      /Do not change the exported AuthProvider interface/,
+    );
+
+    const instructions = runRecovery(
+      ['launch-instructions', '--manifest', '.claude/recovery/recovery-manifest.json'],
+      tmp,
+    );
+    assert.equal(instructions.contractPath, seededPath);
+    assert.ok(instructions.hookInjection);
   } finally {
     cleanupScenario(tmp);
   }

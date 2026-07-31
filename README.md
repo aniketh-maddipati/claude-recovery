@@ -154,6 +154,10 @@ Under `.claude/recovery/` (never sent remotely):
 - Which commit was "last good" without your explicit base SHA choice
 - How to resume or fork your current interactive session programmatically
 
+## Worktree SessionStart seeding
+
+`SessionStart` reads `.claude/recovery/pending-contract.json` from the **session cwd**. Because the launch command starts Claude inside the recovery worktree, `create-worktree` seeds the approved pending contract (plus `recovery-contract.md`) into that worktree. Leaving the contract only in the source tree causes a silent no-injection.
+
 ## Manual step (v1)
 
 After recovery setup, **you** run the displayed launch command in the recovery worktree. The plugin cannot start a new interactive Claude Code session on your behalf.

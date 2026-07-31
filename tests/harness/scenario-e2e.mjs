@@ -220,6 +220,15 @@ export function runScenarioE2E(name, { worktreeName = `recovery-${name}` } = {})
     );
     assert.ok(existsSync(wt.worktree.path));
 
+    const seededPending = join(wt.worktree.path, '.claude', 'recovery', 'pending-contract.json');
+    assert.ok(
+      existsSync(seededPending),
+      'approved pending-contract.json must be seeded into the recovery worktree for SessionStart',
+    );
+    const seeded = JSON.parse(readFileSync(seededPending, 'utf8'));
+    assert.equal(seeded.approved, true);
+    assert.ok(!seeded.injectedAt, 'seeded contract must be fresh for the new session');
+
     const applied = runRecovery(
       ['apply-selected-patches', '--manifest', '.claude/recovery/recovery-manifest.json'],
       tmp,
@@ -241,31 +250,37 @@ export function runScenarioE2E(name, { worktreeName = `recovery-${name}` } = {})
       }
     }
 
-    const approvedHook = createSessionHookOutput(SESSION_HOOK, {
+    // SessionStart must succeed when Claude is launched with cwd = recovery worktree.
+    const worktreeHook = createSessionHookOutput(SESSION_HOOK, {
       hook_event_name: 'SessionStart',
       source: 'startup',
-      cwd: tmp,
-      session_id: `${name}-approved`,
+      cwd: wt.worktree.path,
+      session_id: `${name}-worktree`,
     });
-    assert.ok(approvedHook, 'approved SessionStart should inject additionalContext');
+    assert.ok(worktreeHook, 'SessionStart in recovery worktree should inject additionalContext');
     for (const fragment of expect.hookContextMustInclude ?? []) {
-      assert.match(approvedHook.hookSpecificOutput.additionalContext, new RegExp(fragment));
+      assert.match(worktreeHook.hookSpecificOutput.additionalContext, new RegExp(fragment));
     }
 
     const secondHook = createSessionHookOutput(SESSION_HOOK, {
       hook_event_name: 'SessionStart',
       source: 'startup',
-      cwd: tmp,
-      session_id: `${name}-second`,
+      cwd: wt.worktree.path,
+      session_id: `${name}-worktree-second`,
     });
     assert.equal(secondHook, null, 'must not inject an already-injected contract');
 
-    // Wipe approved pending so launch-instructions exercises manual fallback.
-    const pendingPath = join(tmp, '.claude/recovery/pending-contract.json');
-    if (existsSync(pendingPath)) {
-      const pending = JSON.parse(readFileSync(pendingPath, 'utf8'));
+    // Wipe approved pending in the worktree so launch-instructions exercises manual fallback.
+    if (existsSync(seededPending)) {
+      const pending = JSON.parse(readFileSync(seededPending, 'utf8'));
       pending.approved = false;
-      writeFileSync(pendingPath, `${JSON.stringify(pending, null, 2)}\n`);
+      writeFileSync(seededPending, `${JSON.stringify(pending, null, 2)}\n`);
+    }
+    const sourcePending = join(tmp, '.claude/recovery/pending-contract.json');
+    if (existsSync(sourcePending)) {
+      const pending = JSON.parse(readFileSync(sourcePending, 'utf8'));
+      pending.approved = false;
+      writeFileSync(sourcePending, `${JSON.stringify(pending, null, 2)}\n`);
     }
 
     const instructions = runRecovery(
@@ -286,7 +301,7 @@ export function runScenarioE2E(name, { worktreeName = `recovery-${name}` } = {})
       manifest: finalManifest,
       applied,
       instructions,
-      approvedHook,
+      worktreeHook,
     };
   } catch (err) {
     cleanupScenario(tmp);
