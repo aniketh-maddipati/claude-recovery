@@ -157,10 +157,11 @@ function setupSandbox({ scenario, withBadAttempt, reset }) {
 }
 
 function printNextSteps(scenario, sandbox) {
+  const pluginDir = process.env.CLAUDE_RECOVERY_PLUGIN_DIR || ROOT;
   console.error(`
 Next:
   cd ${sandbox}
-  claude --plugin-dir ${ROOT}
+  claude --plugin-dir ${pluginDir}
 
 Prompts:
   ${join(ROOT, 'manual-test', 'PROMPTS.md')}

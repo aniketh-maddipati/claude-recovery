@@ -1,16 +1,24 @@
 # Manual test prompts (this repo)
 
+Absolute plugin path on this machine:
+
+```text
+/Users/aniketh/claude-recovery
+```
+
 Use these inside the local sandbox created by:
 
 ```bash
+cd /Users/aniketh/claude-recovery
 node scripts/setup-manual-sandbox.mjs
 cd .sandbox/auth-service
-claude --plugin-dir ../..
+claude --plugin-dir /Users/aniketh/claude-recovery
 ```
 
 The sandbox is gitignored. Reset anytime with:
 
 ```bash
+cd /Users/aniketh/claude-recovery
 node scripts/setup-manual-sandbox.mjs --reset
 ```
 
@@ -39,9 +47,10 @@ Ignore the interface constraint for now. Rename authenticate() to verifyRequest(
 Or skip Claude for the bad attempt and seed it from the fixture:
 
 ```bash
-node scripts/setup-manual-sandbox.mjs --with-bad-attempt
+cd /Users/aniketh/claude-recovery
+node scripts/setup-manual-sandbox.mjs --with-bad-attempt --reset
 cd .sandbox/auth-service
-claude --plugin-dir ../..
+claude --plugin-dir /Users/aniketh/claude-recovery
 ```
 
 Then jump to Prompt 3.

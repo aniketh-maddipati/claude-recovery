@@ -42,6 +42,8 @@ The recover skill is exposed as `/claude-recovery:recover` (plugin namespace + s
 No external project needed. Create a disposable sandbox from the auth fixture:
 
 ```bash
+cd /Users/aniketh/claude-recovery
+
 # clean base only — you drive the bad attempt with prompts
 node scripts/setup-manual-sandbox.mjs
 
@@ -49,7 +51,7 @@ node scripts/setup-manual-sandbox.mjs
 node scripts/setup-manual-sandbox.mjs --with-bad-attempt --reset
 
 cd .sandbox/auth-service
-claude --plugin-dir ../..
+claude --plugin-dir /Users/aniketh/claude-recovery
 ```
 
 Copy-paste prompts: [`manual-test/PROMPTS.md`](manual-test/PROMPTS.md)
@@ -57,6 +59,7 @@ Copy-paste prompts: [`manual-test/PROMPTS.md`](manual-test/PROMPTS.md)
 Reset the sandbox anytime:
 
 ```bash
+cd /Users/aniketh/claude-recovery
 node scripts/setup-manual-sandbox.mjs --reset
 ```
 
