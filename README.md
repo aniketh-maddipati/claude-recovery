@@ -37,6 +37,29 @@ claude --plugin-dir .
 
 The recover skill is exposed as `/claude-recovery:recover` (plugin namespace + skill folder name).
 
+## Manual test in this repo
+
+No external project needed. Create a disposable sandbox from the auth fixture:
+
+```bash
+# clean base only — you drive the bad attempt with prompts
+node scripts/setup-manual-sandbox.mjs
+
+# or seed the bad attempt immediately
+node scripts/setup-manual-sandbox.mjs --with-bad-attempt --reset
+
+cd .sandbox/auth-service
+claude --plugin-dir ../..
+```
+
+Copy-paste prompts: [`manual-test/PROMPTS.md`](manual-test/PROMPTS.md)
+
+Reset the sandbox anytime:
+
+```bash
+node scripts/setup-manual-sandbox.mjs --reset
+```
+
 ## How `/recover` works
 
 1. **Capture & inspect** — hooks record submitted prompts and Bash command evidence under `.claude/recovery/`. Run:
