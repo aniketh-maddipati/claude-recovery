@@ -2,12 +2,15 @@
 /**
  * Encapsulated manual test — prompts baked in, optional Claude CLI automation.
  *
- *   node scripts/run-manual-test.mjs                    # mechanical only (~2s)
+ *   node scripts/run-manual-test.mjs                    # mechanical only (~2s, ephemeral)
+ *   node scripts/run-manual-test.mjs --sandbox          # persistent .sandbox/ for cd + claude
  *   node scripts/run-manual-test.mjs --claude           # + Claude skill prompts
  *   node scripts/run-manual-test.mjs --claude --implement  # + worktree implementation
  *   node scripts/run-manual-test.mjs --print-prompts    # setup + echo prompts for paste
+ *   node scripts/run-manual-test.mjs --eval             # run evals/cases/ prompt regressions
+ *   node scripts/run-manual-test.mjs --eval --case auth-recover-labels
  *
- * Requires Claude auth for --claude / --implement.
+ * Requires Claude auth for --claude / --implement / --eval.
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -19,10 +22,12 @@ import {
   runClaudePrompt,
   scorePromptResult,
   formatClaudeFailure,
+  listEvalCases,
+  runPromptEvalCase,
 } from '../tests/harness/prompt-eval.mjs';
+import { setupScenario, cleanupScenario, ROOT } from '../tests/harness/scenario-e2e.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(__dirname, '..');
 const RECOVERY = join(ROOT, 'scripts', 'recovery.mjs');
 const PROMPTS = join(ROOT, 'manual-test', 'prompts.json');
 
@@ -32,6 +37,9 @@ function parseArgs(argv) {
     claude: false,
     implement: false,
     printPrompts: false,
+    sandbox: false,
+    eval: false,
+    caseId: null,
     keep: false,
   };
   for (let i = 0; i < argv.length; i += 1) {
@@ -39,13 +47,20 @@ function parseArgs(argv) {
     if (arg === '--claude') options.claude = true;
     if (arg === '--implement') options.implement = true;
     if (arg === '--print-prompts') options.printPrompts = true;
+    if (arg === '--sandbox') options.sandbox = true;
+    if (arg === '--eval') options.eval = true;
     if (arg === '--keep') options.keep = true;
     if (arg === '--scenario') {
       options.scenario = argv[i + 1];
       i += 1;
     }
+    if (arg === '--case') {
+      options.caseId = argv[i + 1];
+      i += 1;
+    }
   }
   if (options.implement) options.claude = true;
+  if (options.printPrompts || options.claude) options.sandbox = true;
   return options;
 }
 
@@ -61,7 +76,7 @@ function runRecovery(args, cwd) {
   return JSON.parse(result.stdout);
 }
 
-function setupSandbox(scenario) {
+function setupPersistentSandbox(scenario) {
   const result = spawnSync(
     'node',
     ['scripts/setup-manual-sandbox.mjs', '--with-bad-attempt', '--reset', '--scenario', scenario],
@@ -135,6 +150,7 @@ function verifyWorktree(scenario, finalized) {
   const checks = {
     worktreeExists: existsSync(wt),
     pendingSeeded: existsSync(join(wt, '.claude', 'recovery', 'pending-contract.json')),
+    launchCommand: Boolean(finalized.launch?.recommendedLaunchCommand),
   };
   if (scenario === 'auth-service') {
     const provider = readFileSync(join(wt, 'src/auth/provider.mjs'), 'utf8');
@@ -174,109 +190,174 @@ function printPromptsForPaste(scenario, prompts, sandbox, pluginDir) {
   }, null, 2));
 }
 
+function runEvalMode({ caseId }) {
+  const availability = promptEvalAvailability();
+  const replay = process.env.CLAUDE_RECOVERY_EVAL_REPLAY === '1';
+
+  if (!replay && !availability.ok) {
+    console.log(JSON.stringify({ ok: false, skipped: true, reason: availability.reason }, null, 2));
+    process.exit(2);
+  }
+
+  const cases = listEvalCases().filter(
+    ({ caseDef }) => !caseId || caseDef.id === caseId,
+  );
+  if (cases.length === 0) {
+    console.error(JSON.stringify({ ok: false, error: `No eval cases matched: ${caseId}` }, null, 2));
+    process.exit(1);
+  }
+
+  let failed = 0;
+  let skipped = 0;
+  const results = [];
+
+  for (const { caseDef } of cases) {
+    log('eval', caseDef.id);
+    const result = runPromptEvalCase(caseDef);
+    if (result.skipped) {
+      skipped += 1;
+      results.push({ id: caseDef.id, skipped: true, reason: result.reason });
+      continue;
+    }
+    const ok = result.ok ?? result.score?.ok;
+    if (!ok) failed += 1;
+    results.push({
+      id: caseDef.id,
+      ok,
+      mode: result.mode,
+      failures: result.failures ?? result.score?.failures ?? [],
+      preview: (result.text ?? '').slice(0, 400),
+    });
+  }
+
+  const summary = { ok: failed === 0, failed, skipped, total: cases.length, results };
+  console.log(JSON.stringify(summary, null, 2));
+  process.exit(failed === 0 ? 0 : 1);
+}
+
 function main() {
   const options = parseArgs(process.argv.slice(2));
+
+  if (options.eval) {
+    runEvalMode({ caseId: options.caseId });
+    return;
+  }
+
   const pluginDir = process.env.CLAUDE_RECOVERY_PLUGIN_DIR || ROOT;
   const prompts = loadPrompts(options.scenario);
   const stages = [];
+  let ephemeralTmp = null;
 
-  log('setup', `scenario=${options.scenario}`);
-  const { sandbox } = setupSandbox(options.scenario);
+  log('setup', `scenario=${options.scenario} sandbox=${options.sandbox}`);
+  let sandbox;
+  if (options.sandbox) {
+    ({ sandbox } = setupPersistentSandbox(options.scenario));
+  } else {
+    const ctx = setupScenario(options.scenario);
+    ephemeralTmp = ctx.tmp;
+    sandbox = ctx.tmp;
+  }
 
   if (options.printPrompts) {
     printPromptsForPaste(options.scenario, prompts, sandbox, pluginDir);
     return;
   }
 
-  runRecovery(['capture'], sandbox);
+  try {
+    runRecovery(['capture'], sandbox);
 
-  if (options.claude) {
-    const availability = promptEvalAvailability();
-    if (!availability.ok) {
-      console.log(JSON.stringify({
-        ok: false,
-        skipped: true,
-        reason: availability.reason,
-        hint: 'Run without --claude for mechanical-only, or set ANTHROPIC_API_KEY / claude auth login',
-      }, null, 2));
-      process.exit(2);
-    }
+    if (options.claude) {
+      const availability = promptEvalAvailability();
+      if (!availability.ok) {
+        console.log(JSON.stringify({
+          ok: false,
+          skipped: true,
+          reason: availability.reason,
+          hint: 'Run without --claude for mechanical-only, or set ANTHROPIC_API_KEY / claude auth login',
+        }, null, 2));
+        process.exit(2);
+      }
 
-    preflightClaude(availability.claude, pluginDir);
+      preflightClaude(availability.claude, pluginDir);
 
-    for (const stageName of ['recover', 'decision', 'approve']) {
-      if (!prompts[stageName]) continue;
-      const stage = runPromptStage({
-        claude: availability.claude,
-        sandbox,
-        pluginRoot: pluginDir,
-        stageName,
-        stageDef: prompts[stageName],
-      });
-      stages.push(stage);
-      if (stage.score.failures?.length) {
-        log(stageName, `soft-check warnings: ${stage.score.failures.join('; ')}`);
+      for (const stageName of ['recover', 'decision', 'approve']) {
+        if (!prompts[stageName]) continue;
+        const stage = runPromptStage({
+          claude: availability.claude,
+          sandbox,
+          pluginRoot: pluginDir,
+          stageName,
+          stageDef: prompts[stageName],
+        });
+        stages.push(stage);
+        if (stage.score.failures?.length) {
+          log(stageName, `soft-check warnings: ${stage.score.failures.join('; ')}`);
+        }
       }
     }
+
+    log('finalize', 'running recovery.mjs finalize ...');
+    const finalized = runRecovery(
+      ['finalize', '--decision-file', '.claude/recovery/decision.json', '--name', 'manual-test'],
+      sandbox,
+    );
+
+    log('verify', 'running verify-boundaries ...');
+    const boundaries = runRecovery(
+      ['verify-boundaries', '--manifest', '.claude/recovery/recovery-manifest.json'],
+      sandbox,
+    );
+    if (!boundaries.ok) {
+      throw new Error(`boundary verification failed: ${JSON.stringify(boundaries.checks)}`);
+    }
+
+    const verify = verifyWorktree(options.scenario, finalized);
+    if (!verify.ok) {
+      throw new Error(`worktree verification failed: ${JSON.stringify(verify.checks)}`);
+    }
+
+    let implement = null;
+    let tests = null;
+
+    if (options.implement && options.claude) {
+      const availability = promptEvalAvailability();
+      implement = runPromptStage({
+        claude: availability.claude,
+        sandbox: finalized.worktree.path,
+        pluginRoot: pluginDir,
+        stageName: 'implement',
+        stageDef: prompts.implement,
+      });
+      stages.push(implement);
+      tests = runTestsInWorktree(options.scenario, finalized.worktree.path);
+    }
+
+    const summary = {
+      ok: verify.ok && (tests ? tests.ok : true),
+      mode: options.claude ? (options.implement ? 'claude+implement' : 'claude') : 'mechanical',
+      scenario: options.scenario,
+      sandbox,
+      worktree: finalized.worktree.path,
+      launch: finalized.launch.recommendedLaunchCommand,
+      verify: verify.checks,
+      boundaries: boundaries.checks,
+      stages: stages.map((s) => ({
+        stage: s.stage,
+        scoreOk: s.score?.ok ?? null,
+        scoreFailures: s.score?.failures ?? [],
+        preview: s.preview,
+      })),
+      tests,
+      keptAt: options.keep ? sandbox : null,
+    };
+
+    console.log(JSON.stringify(summary, null, 2));
+    if (!summary.ok) process.exit(1);
+  } finally {
+    if (ephemeralTmp && !options.keep) {
+      cleanupScenario(ephemeralTmp);
+    }
   }
-
-  log('finalize', 'running recovery.mjs finalize ...');
-  const finalized = runRecovery(
-    ['finalize', '--decision-file', '.claude/recovery/decision.json', '--name', 'manual-test'],
-    sandbox,
-  );
-
-  log('verify', 'running verify-boundaries ...');
-  const boundaries = runRecovery(
-    ['verify-boundaries', '--manifest', '.claude/recovery/recovery-manifest.json'],
-    sandbox,
-  );
-  if (!boundaries.ok) {
-    throw new Error(`boundary verification failed: ${JSON.stringify(boundaries.checks)}`);
-  }
-
-  const verify = verifyWorktree(options.scenario, finalized);
-  if (!verify.ok) {
-    throw new Error(`worktree verification failed: ${JSON.stringify(verify.checks)}`);
-  }
-
-  let implement = null;
-  let tests = null;
-
-  if (options.implement && options.claude) {
-    const availability = promptEvalAvailability();
-    implement = runPromptStage({
-      claude: availability.claude,
-      sandbox: finalized.worktree.path,
-      pluginRoot: pluginDir,
-      stageName: 'implement',
-      stageDef: prompts.implement,
-    });
-    stages.push(implement);
-    tests = runTestsInWorktree(options.scenario, finalized.worktree.path);
-  }
-
-  const summary = {
-    ok: verify.ok && (tests ? tests.ok : true),
-    mode: options.claude ? (options.implement ? 'claude+implement' : 'claude') : 'mechanical',
-    scenario: options.scenario,
-    sandbox,
-    worktree: finalized.worktree.path,
-    launch: finalized.launch.recommendedLaunchCommand,
-    verify: verify.checks,
-    boundaries: boundaries.checks,
-    stages: stages.map((s) => ({
-      stage: s.stage,
-      scoreOk: s.score?.ok ?? null,
-      scoreFailures: s.score?.failures ?? [],
-      preview: s.preview,
-    })),
-    tests,
-    keptAt: options.keep ? sandbox : null,
-  };
-
-  console.log(JSON.stringify(summary, null, 2));
-  if (!summary.ok) process.exit(1);
 }
 
 try {
