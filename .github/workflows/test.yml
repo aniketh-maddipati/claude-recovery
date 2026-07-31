@@ -16,7 +16,7 @@ jobs:
           node-version: '22'
 
       - name: Deterministic recovery e2e
-        run: node --test tests/recovery.test.mjs
+        run: node --test tests/recovery.test.mjs tests/demo.test.mjs
 
       - name: Native hook setup tests
         run: node --test tests/setup-hooks.test.mjs

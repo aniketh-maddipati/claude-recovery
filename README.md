@@ -219,6 +219,14 @@ node scripts/run-manual-test.mjs --print-prompts   # copy-paste prompts from pro
 
 Golden scenario: `fixtures/auth-service/` (bad API migration; keep compat test; reject client changes).
 
+### 30-second demo recording
+
+```bash
+./demo/run-demo.sh
+```
+
+Follow the printed `claude --plugin-dir` command and the shot list in [`demo/RECORDING.md`](demo/RECORDING.md).
+
 ## Tests
 
 CI runs on every push:
