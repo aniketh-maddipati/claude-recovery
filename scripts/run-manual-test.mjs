@@ -10,7 +10,7 @@
  * Requires Claude auth for --claude / --implement.
  */
 
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
@@ -18,6 +18,7 @@ import {
   promptEvalAvailability,
   runClaudePrompt,
   scorePromptResult,
+  formatClaudeFailure,
 } from '../tests/harness/prompt-eval.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -89,7 +90,7 @@ function asCaseDef(name, stageDef) {
     maxTurns: stageDef.maxTurns ?? 10,
     tools: stageDef.tools,
     disallowedTools: stageDef.disallowedTools,
-    permissionMode: stageDef.permissionMode ?? 'bypassPermissions',
+    permissionMode: stageDef.permissionMode ?? 'acceptEdits',
     expect: stageDef.expect ?? {},
   };
 }
@@ -98,11 +99,35 @@ function runPromptStage({ claude, sandbox, pluginRoot, stageName, stageDef }) {
   log(stageName, 'running claude -p ...');
   const caseDef = asCaseDef(stageName, stageDef);
   const result = runClaudePrompt({ claude, cwd: sandbox, pluginRoot, caseDef });
-  if (result.status !== 0) {
-    throw new Error(`${stageName} failed: ${result.stderr || result.error}`);
+  if (!result.ok) {
+    const detail = formatClaudeFailure(stageName, result, { claude, args: result.args });
+    const errPath = join(sandbox, '.claude', 'recovery', `last-${stageName}-error.txt`);
+    mkdirSync(join(sandbox, '.claude', 'recovery'), { recursive: true });
+    writeFileSync(errPath, detail, 'utf8');
+    throw new Error(`${detail}\n(full log: ${errPath})`);
   }
   const score = scorePromptResult(result.text, caseDef.expect);
   return { stage: stageName, text: result.text, score, preview: result.text.slice(0, 300) };
+}
+
+function preflightClaude(claude, pluginDir) {
+  const probe = runClaudePrompt({
+    claude,
+    cwd: ROOT,
+    pluginRoot: pluginDir,
+    caseDef: {
+      id: 'preflight',
+      prompt: ['Reply with exactly: ok'],
+      maxTurns: 1,
+      tools: 'Read',
+      allowedTools: 'Read',
+      permissionMode: 'acceptEdits',
+    },
+    timeoutMs: 60_000,
+  });
+  if (!probe.ok) {
+    throw new Error(formatClaudeFailure('claude preflight', probe, { claude, args: probe.args }));
+  }
 }
 
 function verifyWorktree(scenario, finalized) {
@@ -176,6 +201,8 @@ function main() {
       }, null, 2));
       process.exit(2);
     }
+
+    preflightClaude(availability.claude, pluginDir);
 
     for (const stageName of ['recover', 'decision', 'approve']) {
       if (!prompts[stageName]) continue;

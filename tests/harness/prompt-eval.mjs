@@ -112,6 +112,51 @@ function extractResultText(stdout, outputFormat) {
   }
 }
 
+function parseClaudeJson(stdout) {
+  try {
+    return JSON.parse(stdout);
+  } catch {
+    const start = stdout.lastIndexOf('{');
+    if (start === -1) return null;
+    try {
+      return JSON.parse(stdout.slice(start));
+    } catch {
+      return null;
+    }
+  }
+}
+
+export function formatClaudeFailure(label, result, { claude, args } = {}) {
+  const parsed = parseClaudeJson(result.stdout ?? '');
+  const parts = [`${label} failed (exit ${result.status ?? 'null'})`];
+  if (result.signal) parts.push(`signal: ${result.signal}`);
+  if (result.error) parts.push(`spawn: ${result.error}`);
+  if (parsed?.is_error || parsed?.subtype === 'error_during_execution') {
+    parts.push(`claude error: ${parsed.result ?? parsed.error ?? 'unknown'}`);
+  } else if (parsed?.result && /not logged in|login|auth/i.test(String(parsed.result))) {
+    parts.push(`auth: ${parsed.result}`);
+  }
+  if (result.stderr?.trim()) parts.push(`stderr:\n${result.stderr.trim()}`);
+  if (result.stdout?.trim()) {
+    const preview = result.stdout.trim().slice(0, 4000);
+    parts.push(`stdout:\n${preview}`);
+  }
+  if (claude && args) {
+    parts.push(`command: ${claude} ${args.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ').slice(0, 500)}...`);
+  }
+  return parts.join('\n');
+}
+
+export function claudePromptFailed(result, parsed) {
+  if (result.status !== 0 && result.status !== null) return true;
+  if (result.signal) return true;
+  if (result.error) return true;
+  if (parsed?.is_error) return true;
+  if (parsed?.subtype === 'error_during_execution') return true;
+  if (parsed?.result && /not logged in · please run \/login/i.test(String(parsed.result))) return true;
+  return false;
+}
+
 export function scorePromptResult(text, expect) {
   const failures = [];
   const haystack = text ?? '';
@@ -145,6 +190,7 @@ export function runClaudePrompt({
   timeoutMs = Number(process.env.CLAUDE_RECOVERY_EVAL_TIMEOUT_MS ?? 180_000),
 }) {
   const prompt = flattenPrompt(caseDef.prompt, pluginRoot);
+  const tools = caseDef.tools ?? 'Bash,Read,Glob,Grep';
   const args = [
     '--plugin-dir',
     pluginRoot,
@@ -155,13 +201,18 @@ export function runClaudePrompt({
     '--max-turns',
     String(caseDef.maxTurns ?? 8),
     '--tools',
-    caseDef.tools ?? 'Bash,Read,Glob,Grep',
+    tools,
+    '--allowedTools',
+    caseDef.allowedTools ?? tools,
     '--permission-mode',
-    caseDef.permissionMode ?? 'bypassPermissions',
+    caseDef.permissionMode ?? 'acceptEdits',
   ];
 
   if (caseDef.disallowedTools) {
     args.push('--disallowedTools', caseDef.disallowedTools);
+  }
+  if (process.env.CLAUDE_RECOVERY_DEBUG === '1') {
+    args.push('--debug');
   }
   if (caseDef.model || process.env.CLAUDE_RECOVERY_EVAL_MODEL) {
     args.push('--model', caseDef.model ?? process.env.CLAUDE_RECOVERY_EVAL_MODEL);
@@ -177,18 +228,24 @@ export function runClaudePrompt({
     maxBuffer: 20 * 1024 * 1024,
     env: {
       ...process.env,
-      // Keep evals from picking up unrelated user hooks/plugins outside plugin-dir.
       CLAUDE_CONFIG_DIR: configDir,
     },
   });
 
+  const stdout = result.stdout ?? '';
+  const parsed = parseClaudeJson(stdout);
+  const failed = claudePromptFailed(result, parsed);
+
   return {
+    ok: !failed,
     status: result.status,
     signal: result.signal,
-    stdout: result.stdout ?? '',
+    stdout,
     stderr: result.stderr ?? '',
     error: result.error?.message ?? null,
-    text: extractResultText(result.stdout ?? '', 'json'),
+    parsed,
+    text: extractResultText(stdout, 'json'),
+    args,
   };
 }
 
@@ -250,13 +307,13 @@ export function runPromptEvalCase(caseDef, options = {}) {
       timeoutMs: options.timeoutMs,
     });
 
-    if (claudeResult.status !== 0) {
+    if (!claudeResult.ok) {
       return {
         skipped: false,
         mode: 'live',
         ok: false,
         failures: [
-          `claude exited ${claudeResult.status}: ${claudeResult.stderr || claudeResult.error || 'unknown error'}`,
+          formatClaudeFailure(caseDef.id, claudeResult, { claude: availability.claude, args: claudeResult.args }),
         ],
         text: claudeResult.text,
         claudeResult,

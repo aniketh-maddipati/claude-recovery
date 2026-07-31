@@ -2,8 +2,9 @@
   "auth-service": {
     "recover": {
       "prompt": [
-        "Follow the /claude-recovery:recover skill.",
-        "Run inspect (capture first if needed) using node <plugin-root>/scripts/recovery.mjs.",
+        "Read and follow <plugin-root>/skills/recover/SKILL.md (headless -p session; do not rely on slash commands).",
+        "Run: node <plugin-root>/scripts/recovery.mjs capture",
+        "Then: node <plugin-root>/scripts/recovery.mjs inspect",
         "Show a compact labeled attempt view (Observed evidence / User decision / Inferred suggestion).",
         "Ask exactly: What should the next attempt keep, reject, or change?",
         "Stop there — do not create a worktree or apply patches yet."
