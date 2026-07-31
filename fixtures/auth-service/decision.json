@@ -1,0 +1,23 @@
+{
+  "userDecision": "Keep the compatibility test and expired-token discovery. The API migration is rejected. Start from the clean base and use an adapter. Do not resume this session.",
+  "originalOutcome": "Add request authentication while preserving the exported AuthProvider interface and avoiding a client migration.",
+  "pinnedBoundaries": [
+    "Do not change the exported AuthProvider interface.",
+    "Do not require a client migration."
+  ],
+  "keep": {
+    "files": ["tests/auth-compat.test.mjs"],
+    "tests": ["tests/auth-compat.test.mjs"],
+    "findings": ["expired-token finding: Tokens prefixed with 'expired' fail authentication with reason 'invalid or expired token' (observed during manual edge-case check)."]
+  },
+  "discard": {
+    "files": ["src/auth/provider.mjs", "src/clients/api-client.mjs"],
+    "assumptions": ["API migration approach"]
+  },
+  "next": {
+    "baseSha": "clean-base",
+    "contextMode": "fresh",
+    "approach": "use an adapter",
+    "verificationCommand": "node --test tests/auth-compat.test.mjs"
+  }
+}

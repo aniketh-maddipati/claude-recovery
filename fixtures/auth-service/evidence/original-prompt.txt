@@ -1,0 +1,1 @@
+Add request authentication while preserving the exported AuthProvider interface and avoiding a client migration.

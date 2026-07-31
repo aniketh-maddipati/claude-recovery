@@ -1,0 +1,6 @@
+{
+  "items": [
+    "Do not change the exported AuthProvider interface.",
+    "Do not require a client migration."
+  ]
+}
