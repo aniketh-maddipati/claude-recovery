@@ -33,6 +33,8 @@ Commands:
   create-worktree --base <sha> --name <name>
   apply-selected-patches --manifest <path>
   launch-instructions --manifest <path>
+
+Native hooks (reliable SessionStart injection): node scripts/setup-hooks.mjs
 `);
 }
 
@@ -433,7 +435,7 @@ function approveRecovery(cwd, decisionPath) {
   const pending = {
     approved: true,
     approvedAt: manifest.timestamps.approvedAt,
-    contractText: manifest.continuationContext,
+    contractText: manifest.contractText,
     continuationContext: manifest.continuationContext,
     manifestPath: join(recoveryRoot(cwd), 'recovery-manifest.json'),
     baseSha: manifest.baseSha,
@@ -577,9 +579,14 @@ function updateManifestWorktree(cwd, manifestPath, worktreeInfo) {
   return manifest;
 }
 
+function shellSingleQuote(value) {
+  return `'${String(value).replace(/'/g, `'\\''`)}'`;
+}
+
 function launchInstructions(cwd, manifestPath) {
   const manifest = readJson(manifestPath);
   const wtPath = manifest.worktreePath ?? '<worktree-path>';
+  const pluginDir = resolve(__dirname, '..');
   const worktreeContractPath = join(wtPath, RECOVERY_DIR, 'pending-contract.json');
   const sourceContractPath = join(recoveryRoot(cwd), 'pending-contract.json');
   const contractPath = existsSync(worktreeContractPath)
@@ -587,49 +594,50 @@ function launchInstructions(cwd, manifestPath) {
     : sourceContractPath;
   const hasPending = existsSync(contractPath) && readJson(contractPath).approved;
 
-  const initialPrompt =
-    'Use the Recovery Contract injected via additionalContext. ' +
-    'Respect all non-negotiable boundaries. Do not reintroduce rejected approaches.';
+  const contractFileRel = join(RECOVERY_DIR, 'recovery-contract.md');
+  const contractFileInWorktree = join(wtPath, contractFileRel);
+  const contractFile = existsSync(contractFileInWorktree)
+    ? contractFileInWorktree
+    : join(recoveryRoot(cwd), 'recovery-contract.md');
 
-  const launchCommand = [
-    'claude --plugin-dir',
-    `"${resolve(__dirname, '..')}"`,
-    `cd "${wtPath}" && claude --plugin-dir "${resolve(__dirname, '..')}"`,
-  ].join(' ');
-
-  const recommended = `cd "${wtPath}" && claude --plugin-dir "${resolve(__dirname, '..')}" -p "${initialPrompt}"`;
+  const interactiveLaunch =
+    `cd ${shellSingleQuote(wtPath)} && claude --plugin-dir ${shellSingleQuote(pluginDir)}`;
+  const contractLaunch =
+    `${interactiveLaunch} -p "$(cat ${contractFileRel})"`;
+  const setupHooksHint = 'node scripts/setup-hooks.mjs  # one-time, for native SessionStart injection';
 
   const output = {
     label: 'User decision',
     worktreePath: wtPath,
     manifestPath,
     contractPath: hasPending ? contractPath : null,
+    contractFile: existsSync(contractFile) ? contractFile : null,
     hookInjection: hasPending
       ? {
           label: 'Inferred suggestion',
           detail:
-            'SessionStart reads .claude/recovery/pending-contract.json from the worktree cwd (seeded at create-worktree) and injects it via additionalContext.',
+            'SessionStart reads .claude/recovery/pending-contract.json from the worktree cwd. ' +
+            'Plugin hooks may not inject additionalContext on all builds (#16538). ' +
+            'Run setup-hooks.mjs once for native hooks, or use recommendedLaunchCommand which embeds the contract via -p.',
           pendingContractPath: contractPath,
+          setupHooksCommand: setupHooksHint,
         }
       : null,
-    manualFallback: hasPending
-      ? null
-      : {
-          label: 'Observed evidence',
-          contractFile: existsSync(join(wtPath, RECOVERY_DIR, 'recovery-contract.md'))
-            ? join(wtPath, RECOVERY_DIR, 'recovery-contract.md')
-            : join(recoveryRoot(cwd), 'recovery-contract.md'),
-          contractText: manifest.continuationContext ?? manifest.contractText ?? '',
-          instruction:
-            'No approved pending-contract.json found in the worktree. Paste recovery-contract.md contents manually as the first message.',
-        },
-    recommendedLaunchCommand: recommended,
-    alternateLaunchCommand: launchCommand,
-    initialUserPrompt: initialPrompt,
+    manualFallback: {
+      label: 'Observed evidence',
+      contractFile,
+      contractText: manifest.contractText ?? manifest.continuationContext ?? '',
+      instruction:
+        'If the new session does not acknowledge the Recovery Contract, Paste recovery-contract.md as your first message.',
+    },
+    recommendedLaunchCommand: contractLaunch,
+    recommendedLaunchCommandInteractive: interactiveLaunch,
+    setupNativeHooksCommand: setupHooksHint,
     limitations: [
       'This plugin cannot invoke /clear or move an existing session.',
       'The developer must start Claude Code in the recovery worktree manually.',
-      'Plugin SessionStart additionalContext injection may vary by Claude Code version; manual paste fallback is always available.',
+      'recommendedLaunchCommand embeds recovery-contract.md via -p for reliability.',
+      'For ambient SessionStart injection, run setup-hooks.mjs once (native hooks).',
     ],
   };
 

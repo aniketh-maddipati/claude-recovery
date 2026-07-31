@@ -4,7 +4,7 @@ A Claude Code plugin with one developer-invoked action: `/recover`. When an atte
 
 **Requires:** Git with at least one commit.
 
-**Status:** v0.1.0. Tested manually against Claude Code 2.1.x. Not a marketplace plugin yet.
+**Status:** v0.1.1. Tested manually against Claude Code 2.1.x. Not a marketplace plugin yet.
 
 Full scope and caveats: [LIMITATIONS.md](LIMITATIONS.md).
 
@@ -27,7 +27,17 @@ Evidence is labeled **Observed evidence**, **User decision**, or **Inferred sugg
 
 You make the recovery decision. The plugin handles the handoff.
 
-SessionStart contract injection is best-effort. On some Claude Code builds, plugin hooks may not surface `additionalContext` to the model ([upstream issue #16538](https://github.com/anthropics/claude-code/issues/16538)). If injection fails, paste `.claude/recovery/recovery-contract.md` manually. See [LIMITATIONS.md](LIMITATIONS.md).
+SessionStart contract injection works best with **native hooks**. Plugin hooks may not surface `additionalContext` on some Claude Code builds ([#16538](https://github.com/anthropics/claude-code/issues/16538)).
+
+**Recommended one-time setup:**
+
+```bash
+node /path/to/claude-recovery/scripts/setup-hooks.mjs
+```
+
+This installs the same hook script into `~/.claude/settings.json`, where SessionStart injection is reliable.
+
+**Launch without paste:** `launch-instructions` prints a command that embeds `recovery-contract.md` via `-p "$(cat ...)"`. Manual paste remains the last-resort fallback.
 
 ## Install
 
@@ -35,6 +45,7 @@ From this repository:
 
 ```bash
 claude --plugin-dir /path/to/claude-recovery
+node /path/to/claude-recovery/scripts/setup-hooks.mjs   # one-time, reliable contract injection
 ```
 
 Skill: `/claude-recovery:recover`
@@ -106,6 +117,7 @@ Add scenarios under `fixtures/<name>/` with `scenario.json` and `decision.json`.
 | `finalize` | Approve, worktree, apply, seed contract |
 | `verify-boundaries` | Compare boundary files to base SHA |
 | `launch-instructions` | Print manual launch command |
+| `setup-hooks.mjs` | One-time native hook install for reliable SessionStart |
 
 ## Files worth knowing
 

@@ -18,6 +18,9 @@ jobs:
       - name: Deterministic recovery e2e
         run: node --test tests/recovery.test.mjs
 
+      - name: Native hook setup tests
+        run: node --test tests/setup-hooks.test.mjs
+
       - name: Mechanical recovery smoke
         run: node scripts/run-manual-test.mjs
 
