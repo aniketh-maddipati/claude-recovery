@@ -112,6 +112,7 @@ test('create-worktree seeds approved pending contract into recovery worktree cwd
       injected.hookSpecificOutput.additionalContext,
       /Do not change the exported AuthProvider interface/,
     );
+    assert.match(injected.hookSpecificOutput.additionalContext, /^Keep/m);
 
     const instructions = runRecovery(
       ['launch-instructions', '--manifest', '.claude/recovery/recovery-manifest.json'],
@@ -119,6 +120,9 @@ test('create-worktree seeds approved pending contract into recovery worktree cwd
     );
     assert.equal(instructions.contractPath, seededPath);
     assert.ok(instructions.hookInjection);
+    assert.match(instructions.recommendedLaunchCommand, /cat \.claude\/recovery\/recovery-contract\.md/);
+    assert.ok(instructions.recommendedLaunchCommandInteractive.includes('claude --plugin-dir'));
+    assert.match(instructions.setupNativeHooksCommand, /setup-hooks\.mjs/);
   } finally {
     cleanupScenario(tmp);
   }
