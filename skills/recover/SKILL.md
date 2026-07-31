@@ -123,6 +123,8 @@ When approved, run:
 node ${CLAUDE_PLUGIN_ROOT}/scripts/recovery.mjs finalize --decision-file .claude/recovery/decision.json --name recovery-<timestamp>
 ```
 
+Then print launch instructions from `launch-instructions`. Prefer **`recommendedLaunchCommand`** (embeds `recovery-contract.md` via `-p`). For ambient SessionStart injection, the developer should run **`node ${CLAUDE_PLUGIN_ROOT}/scripts/setup-hooks.mjs`** once (native hooks).
+
 Print the launch command for the developer to run manually. This plugin **cannot** invoke `/clear`, move an existing session, or silently start a new interactive Claude Code session.
 
 ## Honest limitations

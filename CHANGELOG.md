@@ -2,6 +2,20 @@
 
 All notable changes to **claude-recovery** are documented here.
 
+## [0.1.1] - 2026-07-31
+
+### Added
+
+- `scripts/setup-hooks.mjs` — one-time install of native Claude Code hooks for reliable SessionStart contract injection
+- `scripts/lib/native-hooks.mjs` — shared merge logic for `~/.claude/settings.json`
+- Launch command now embeds `recovery-contract.md` via `-p "$(cat ...)"` as the primary reliable path
+
+### Changed
+
+- `pending-contract.json` stores full `recovery-contract.md` text (Keep/Discard/Next), not just continuation excerpt
+- `launch-instructions` exposes `recommendedLaunchCommandInteractive` and `setupNativeHooksCommand`
+- Manual paste documented as last-resort fallback, not primary path
+
 ## [0.1.0] - 2026-07-31
 
 ### Added

@@ -25,7 +25,17 @@ The developer makes the recovery decision.
 - `create-worktree` seeds the approved contract into the recovery worktree for this reason.
 - If Claude Code is started outside that worktree, injection will not occur — use the manual paste fallback (`recovery-contract.md`).
 
-**Upstream caveat:** [anthropics/claude-code#16538](https://github.com/anthropics/claude-code/issues/16538) reports that plugin `SessionStart` hooks may execute successfully but not surface `hookSpecificOutput.additionalContext` to the model on some Claude Code versions. Native (non-plugin) hooks are unaffected. This plugin always documents manual paste as a first-class fallback.
+**Plugin hook caveat:** [anthropics/claude-code#16538](https://github.com/anthropics/claude-code/issues/16538) reports that plugin `SessionStart` hooks may execute successfully but not surface `hookSpecificOutput.additionalContext` to the model on some Claude Code versions.
+
+**Reliable path (recommended):** run once:
+
+```bash
+node /path/to/claude-recovery/scripts/setup-hooks.mjs
+```
+
+This mirrors the plugin hooks into native `~/.claude/settings.json`, where SessionStart injection is reported to work.
+
+**Launch without paste:** `launch-instructions` prints a command embedding `recovery-contract.md` via `-p "$(cat .claude/recovery/recovery-contract.md)"`. Manual paste remains the last-resort fallback.
 
 ## Evidence capture
 
