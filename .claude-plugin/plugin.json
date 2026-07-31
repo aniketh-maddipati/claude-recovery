@@ -1,0 +1,9 @@
+{
+  "name": "claude-recovery",
+  "description": "Developer-invoked recovery for untrustworthy Claude Code attempts. Preserves chosen code, decisions, and evidence in a clean continuation worktree.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Aniketh"
+  },
+  "license": "MIT"
+}
