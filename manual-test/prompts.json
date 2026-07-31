@@ -1,0 +1,106 @@
+{
+  "auth-service": {
+    "recover": {
+      "prompt": [
+        "Follow the /claude-recovery:recover skill.",
+        "Run inspect (capture first if needed) using node <plugin-root>/scripts/recovery.mjs.",
+        "Show a compact labeled attempt view (Observed evidence / User decision / Inferred suggestion).",
+        "Ask exactly: What should the next attempt keep, reject, or change?",
+        "Stop there — do not create a worktree or apply patches yet."
+      ],
+      "maxTurns": 10,
+      "tools": "Bash,Read,Glob,Grep",
+      "disallowedTools": "Write,Edit,MultiEdit,NotebookEdit",
+      "expect": {
+        "mustInclude": [
+          "Observed evidence",
+          "What should the next attempt keep, reject, or change?"
+        ],
+        "mustNotInclude": [
+          "created the recovery worktree",
+          "I automatically rewound"
+        ]
+      }
+    },
+    "decision": {
+      "prompt": [
+        "My recovery decision:",
+        "Keep the compatibility test and expired-token discovery.",
+        "The API migration is rejected.",
+        "Start from the clean base and use an adapter.",
+        "Do not resume this session.",
+        "",
+        "Write .claude/recovery/decision.json, run preview, and show me the continuation context.",
+        "Do not finalize until I approve."
+      ],
+      "maxTurns": 12,
+      "tools": "Bash,Read,Write,Glob,Grep",
+      "disallowedTools": "Edit,MultiEdit,NotebookEdit",
+      "expect": {
+        "mustInclude": [
+          "Do not change the exported AuthProvider interface",
+          "Do not reintroduce the API migration"
+        ]
+      }
+    },
+    "approve": {
+      "prompt": "Approved. Run finalize and print the launch command only.",
+      "maxTurns": 8,
+      "tools": "Bash,Read,Glob,Grep",
+      "expect": {
+        "mustIncludeOneOf": [
+          ["finalize", "launch", "worktree", "claude --plugin-dir"]
+        ]
+      }
+    },
+    "implement": {
+      "prompt": [
+        "Use the Recovery Contract injected via additionalContext.",
+        "Add request authentication with an adapter around AuthProvider.",
+        "Do not change AuthProvider or api-client.mjs.",
+        "Before claiming completion run: node --test tests/auth-compat.test.mjs"
+      ],
+      "maxTurns": 25,
+      "tools": "Bash,Read,Write,Edit,Glob,Grep",
+      "expect": {
+        "mustIncludeOneOf": [
+          ["auth-compat", "adapter", "RequestAuthenticator", "tests pass"]
+        ]
+      }
+    }
+  },
+  "config-toggle": {
+    "recover": {
+      "prompt": [
+        "Follow /claude-recovery:recover. Inspect evidence, show labeled view, ask the primary keep/reject/change question. Stop before worktree."
+      ],
+      "maxTurns": 10,
+      "tools": "Bash,Read,Glob,Grep",
+      "disallowedTools": "Write,Edit",
+      "expect": {
+        "mustInclude": ["Observed evidence", "What should the next attempt keep, reject, or change?"]
+      }
+    },
+    "decision": {
+      "prompt": [
+        "Decision: Keep smoke test and default-false finding. Reject getConfig rename. Fresh session from clean base.",
+        "Write decision.json and preview. Do not finalize yet."
+      ],
+      "maxTurns": 12,
+      "tools": "Bash,Read,Write,Glob,Grep"
+    },
+    "approve": {
+      "prompt": "Approved. Run finalize and print launch command.",
+      "maxTurns": 8,
+      "tools": "Bash,Read,Glob,Grep"
+    },
+    "implement": {
+      "prompt": [
+        "Use the Recovery Contract. Add a feature flag reader without renaming getConfig.",
+        "Run: node --test tests/config-smoke.test.mjs"
+      ],
+      "maxTurns": 25,
+      "tools": "Bash,Read,Write,Edit,Glob,Grep"
+    }
+  }
+}
