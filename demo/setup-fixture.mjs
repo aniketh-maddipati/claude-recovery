@@ -114,12 +114,44 @@ export function setupDemoFixture({ reset = true } = {}) {
   };
 }
 
+function printDemoInstructions(result) {
+  console.log(`
+Demo fixture ready: ${result.fixture}
+
+Run this in a terminal with authenticated Claude Code (120% zoom, crop to active pane):
+
+  ${result.launchCommand}
+
+Then invoke: /claude-recovery:recover
+
+When asked what to keep/reject/change, paste:
+
+  ${result.decisionPaste}
+
+Approve the contract preview when shown.
+
+After finalize, run the printed freshClaudeCommand (recommendedLaunchCommandInteractive)
+yourself in a new terminal — the plugin cannot start the fresh session for you.
+
+Shot list: demo/RECORDING.md
+`);
+}
+
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  const printMode = process.argv.includes('--print');
   try {
     const result = setupDemoFixture();
-    console.log(JSON.stringify(result, null, 2));
+    if (printMode) {
+      printDemoInstructions(result);
+    } else {
+      console.log(JSON.stringify(result, null, 2));
+    }
   } catch (err) {
-    console.error(JSON.stringify({ ok: false, error: err.message }, null, 2));
+    if (printMode) {
+      console.error(`Demo setup failed: ${err.message}`);
+    } else {
+      console.error(JSON.stringify({ ok: false, error: err.message }, null, 2));
+    }
     process.exit(1);
   }
 }

@@ -1,0 +1,26 @@
+{
+  "name": "claude-recovery",
+  "version": "0.1.1",
+  "private": true,
+  "description": "Developer-invoked recovery for untrustworthy Claude Code attempts.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "npm run test:unit && npm run test:mechanical && npm run test:prompt-evals",
+    "test:unit": "node --test tests/recovery.test.mjs tests/setup-hooks.test.mjs tests/demo.test.mjs",
+    "test:mechanical": "node scripts/run-manual-test.mjs",
+    "test:prompt-evals": "CLAUDE_RECOVERY_EVAL_SKIP=1 node --test tests/prompt-evals.test.mjs",
+    "test:claude": "node scripts/run-manual-test.mjs --claude",
+    "test:eval": "node scripts/run-manual-test.mjs --eval",
+    "demo": "node demo/setup-fixture.mjs --print",
+    "demo:json": "node demo/setup-fixture.mjs",
+    "sandbox": "node scripts/setup-manual-sandbox.mjs --with-bad-attempt --reset",
+    "sandbox:prompts": "node scripts/run-manual-test.mjs --print-prompts",
+    "setup-hooks": "node scripts/setup-hooks.mjs",
+    "setup-hooks:check": "node scripts/setup-hooks.mjs --check",
+    "recovery": "node scripts/recovery.mjs",
+    "check:node": "node -e \"const v=process.versions.node.split('.').map(Number); if(v[0]<22) { console.error('Node.js 22+ required (found '+process.versions.node+')'); process.exit(1); }\""
+  }
+}

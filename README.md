@@ -8,6 +8,7 @@ Developer-invoked recovery for untrustworthy Claude Code attempts. Preserves cho
 
 ```
 claude-recovery/
+├── package.json             # Local npm scripts (zero runtime dependencies)
 ├── .claude-plugin/
 │   └── plugin.json          # Plugin manifest (name → skill namespace)
 ├── skills/
@@ -27,9 +28,41 @@ Component directories live at the **plugin root**, not inside `.claude-plugin/`.
 
 ## Requirements
 
-- Claude Code CLI (tested on 2.1.x)
-- Git repository with at least one commit
-- Node.js 22+ (for helper scripts and tests)
+- Claude Code CLI (tested on 2.1.x) — only for interactive use and optional live tests
+- Git — required for recovery operations and test fixtures
+- Node.js 22+ — for helper scripts and tests (`node --version`)
+
+No `npm install` is required. This repo has **zero npm dependencies**; scripts use Node.js built-ins only.
+
+## Local commands
+
+From the plugin root after cloning:
+
+```bash
+npm run check:node    # verify Node.js 22+
+npm test              # full CI-equivalent test suite (no Claude auth)
+npm run demo          # prepare disposable demo fixture + print launch command
+npm run sandbox       # reset interactive auth-service sandbox under .sandbox/
+npm run setup-hooks   # one-time native SessionStart hook install
+npm run setup-hooks:check
+```
+
+| Script | Purpose |
+|--------|---------|
+| `npm test` | Unit, demo, mechanical e2e, and prompt-eval harness (scorer only) |
+| `npm run test:unit` | `recovery`, `setup-hooks`, and `demo` tests |
+| `npm run test:mechanical` | Full recovery pipeline smoke (~2s, no auth) |
+| `npm run test:prompt-evals` | Prompt eval scorer only (`CLAUDE_RECOVERY_EVAL_SKIP=1`) |
+| `npm run test:claude` | Live skill checks (requires authenticated Claude CLI) |
+| `npm run test:eval` | Live prompt evals (requires authenticated Claude CLI) |
+| `npm run demo` | Same as `./demo/run-demo.sh` — builds `.demo/auth-service` |
+| `npm run sandbox` | Reset `.sandbox/auth-service` with bad attempt for manual `/recover` |
+| `npm run sandbox:prompts` | Print copy-paste prompts for sandbox testing |
+| `npm run recovery -- <cmd>` | Pass-through to `scripts/recovery.mjs` (e.g. `npm run recovery -- inspect`) |
+| `npm run setup-hooks` | Install native hooks into `~/.claude/settings.json` |
+| `npm run setup-hooks:check` | Verify native hooks are installed |
+
+Shell equivalents still work: `./demo/run-demo.sh`, `node scripts/recovery.mjs …`, etc.
 
 ## Install
 
@@ -43,13 +76,15 @@ claude --plugin-dir /path/to/claude-recovery
 One-time setup for reliable contract injection (recommended):
 
 ```bash
-node /path/to/claude-recovery/scripts/setup-hooks.mjs
+npm run setup-hooks
+# or: node /path/to/claude-recovery/scripts/setup-hooks.mjs
 ```
 
 Verify native hooks:
 
 ```bash
-node /path/to/claude-recovery/scripts/setup-hooks.mjs --check
+npm run setup-hooks:check
+# or: node /path/to/claude-recovery/scripts/setup-hooks.mjs --check
 ```
 
 ## Skill: `/claude-recovery:recover`
@@ -209,12 +244,12 @@ CLAUDE_RECOVERY_EVAL_REPLAY=1 node scripts/run-manual-test.mjs --eval  # replay 
 ### Try the sandbox scenario
 
 ```bash
-node scripts/setup-manual-sandbox.mjs --with-bad-attempt --reset
+npm run sandbox
 cd .sandbox/auth-service
 claude --plugin-dir /path/to/claude-recovery
 # invoke: /claude-recovery:recover
 
-node scripts/run-manual-test.mjs --print-prompts   # copy-paste prompts from prompts.json
+npm run sandbox:prompts   # copy-paste prompts from prompts.json
 ```
 
 Golden scenario: `fixtures/auth-service/` (bad API migration; keep compat test; reject client changes).
@@ -222,7 +257,8 @@ Golden scenario: `fixtures/auth-service/` (bad API migration; keep compat test; 
 ### 30-second demo recording
 
 ```bash
-./demo/run-demo.sh
+npm run demo
+# or: ./demo/run-demo.sh
 ```
 
 Follow the printed `claude --plugin-dir` command and the shot list in [`demo/RECORDING.md`](demo/RECORDING.md).
@@ -232,8 +268,13 @@ Follow the printed `claude --plugin-dir` command and the shot list in [`demo/REC
 CI runs on every push:
 
 ```bash
-node --test tests/recovery.test.mjs
-node --test tests/setup-hooks.test.mjs
+npm test
+```
+
+Equivalent manual invocations:
+
+```bash
+node --test tests/recovery.test.mjs tests/setup-hooks.test.mjs tests/demo.test.mjs
 node scripts/run-manual-test.mjs
 CLAUDE_RECOVERY_EVAL_SKIP=1 node --test tests/prompt-evals.test.mjs
 ```
@@ -241,8 +282,8 @@ CLAUDE_RECOVERY_EVAL_SKIP=1 node --test tests/prompt-evals.test.mjs
 Optional live skill checks (Claude CLI + auth):
 
 ```bash
-node scripts/run-manual-test.mjs --eval
-node scripts/run-manual-test.mjs --claude
+npm run test:eval
+npm run test:claude
 ```
 
 Add scenarios under `fixtures/<name>/` with `scenario.json` and `decision.json`.

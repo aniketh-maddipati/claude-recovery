@@ -15,17 +15,11 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Deterministic recovery e2e
-        run: node --test tests/recovery.test.mjs tests/demo.test.mjs
+      - name: Verify Node.js version
+        run: npm run check:node
 
-      - name: Native hook setup tests
-        run: node --test tests/setup-hooks.test.mjs
-
-      - name: Mechanical recovery smoke
-        run: node scripts/run-manual-test.mjs
-
-      - name: Prompt eval harness (scorer only, no Claude auth)
-        run: CLAUDE_RECOVERY_EVAL_SKIP=1 node --test tests/prompt-evals.test.mjs
+      - name: Test suite
+        run: npm test
 
   prompt-evals:
     runs-on: ubuntu-latest

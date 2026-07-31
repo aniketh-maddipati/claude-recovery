@@ -4,6 +4,7 @@ Prepare the fixture:
 
 ```bash
 ./demo/run-demo.sh
+# or: npm run demo
 ```
 
 Run the printed `cd ... && claude --plugin-dir ...` command in a terminal with authenticated Claude Code. This is a real Git worktree — do not substitute an edited terminal recording.
