@@ -11,8 +11,8 @@ All notable changes to **claude-recovery** are documented here.
 - Recovery helper CLI: `capture`, `inspect`, `preview`, `approve`, `finalize`, `verify-boundaries`, worktree + patch commands
 - Recovery Contract output: `recovery-contract.md`, `recovery-manifest.json`, `pending-contract.json`
 - Scenario-driven e2e tests (`auth-service` golden + `config-toggle`)
-- Optional Claude CLI prompt evals and `run-manual-test.mjs` orchestrator
-- In-repo manual sandbox (`.sandbox/`) and `quick-smoke.mjs`
+- Optional Claude CLI prompt evals and `run-manual-test.mjs` orchestrator (`--eval`, `--claude`, `--sandbox`)
+- In-repo manual sandbox (`.sandbox/`)
 
 ### Fixed
 

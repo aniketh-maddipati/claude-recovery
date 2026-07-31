@@ -50,7 +50,7 @@ Evidence in a recovery worktree starts fresh for the continuation session. Paren
 
 - Slash skills may not expand the same way as in interactive mode. Use `skills/recover/SKILL.md` directly in scripts.
 - `node scripts/run-manual-test.mjs --claude` requires Claude Code CLI + auth.
-- Mechanical tests (`quick-smoke`, e2e) do not require Claude auth.
+- Mechanical tests (`run-manual-test.mjs` without `--claude`, e2e) do not require Claude auth.
 
 ## Tested Claude Code versions
 

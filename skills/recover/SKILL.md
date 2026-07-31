@@ -117,19 +117,10 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/recovery.mjs launch-instructions --manifest .
 
 **Do not** create the worktree, apply patches, or write `pending-contract.json` until the developer explicitly approves.
 
-When approved, prefer one command:
+When approved, run:
 
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/scripts/recovery.mjs finalize --decision-file .claude/recovery/decision.json --name recovery-<timestamp>
-```
-
-Or run the steps individually:
-
-```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/recovery.mjs approve --decision-file .claude/recovery/decision.json
-node ${CLAUDE_PLUGIN_ROOT}/scripts/recovery.mjs create-worktree --base <sha> --name <name>
-node ${CLAUDE_PLUGIN_ROOT}/scripts/recovery.mjs apply-selected-patches --manifest .claude/recovery/recovery-manifest.json
-node ${CLAUDE_PLUGIN_ROOT}/scripts/recovery.mjs launch-instructions --manifest .claude/recovery/recovery-manifest.json
 ```
 
 Print the launch command for the developer to run manually. This plugin **cannot** invoke `/clear`, move an existing session, or silently start a new interactive Claude Code session.

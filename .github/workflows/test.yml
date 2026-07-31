@@ -18,8 +18,8 @@ jobs:
       - name: Deterministic recovery e2e
         run: node --test tests/recovery.test.mjs
 
-      - name: Quick smoke
-        run: node scripts/quick-smoke.mjs
+      - name: Mechanical recovery smoke
+        run: node scripts/run-manual-test.mjs
 
       - name: Prompt eval harness (scorer only, no Claude auth)
         run: CLAUDE_RECOVERY_EVAL_SKIP=1 node --test tests/prompt-evals.test.mjs
@@ -40,4 +40,4 @@ jobs:
       - name: Live prompt evals
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: node scripts/run-prompt-evals.mjs
+        run: node scripts/run-manual-test.mjs --eval

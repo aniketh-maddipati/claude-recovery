@@ -67,13 +67,13 @@ v1 applies **whole-file patches only**. There is no hunk picker.
 No external project required:
 
 ```bash
-node scripts/run-manual-test.mjs          # ~2s, mechanical only
-node scripts/quick-smoke.mjs                # same pipeline, minimal output
+node scripts/run-manual-test.mjs              # ~2s, mechanical only (ephemeral)
+node scripts/run-manual-test.mjs --sandbox    # persistent .sandbox/ for cd + claude
 node scripts/setup-manual-sandbox.mjs --with-bad-attempt --reset
 cd .sandbox/auth-service && claude --plugin-dir ..
 ```
 
-Prompts for interactive runs: [manual-test/PROMPTS.md](manual-test/PROMPTS.md) (also baked into `run-manual-test.mjs --claude`).
+Prompts for interactive runs: `node scripts/run-manual-test.mjs --print-prompts` (source: `manual-test/prompts.json`).
 
 Example scenario: `fixtures/auth-service/` (bad API migration; keep compat test; reject client changes).
 
@@ -83,14 +83,14 @@ CI runs these on every push:
 
 ```bash
 node --test tests/recovery.test.mjs
-node scripts/quick-smoke.mjs
+node scripts/run-manual-test.mjs
 CLAUDE_RECOVERY_EVAL_SKIP=1 node --test tests/prompt-evals.test.mjs
 ```
 
 Optional live skill checks (need Claude Code CLI + auth):
 
 ```bash
-node scripts/run-prompt-evals.mjs
+node scripts/run-manual-test.mjs --eval
 node scripts/run-manual-test.mjs --claude
 ```
 
