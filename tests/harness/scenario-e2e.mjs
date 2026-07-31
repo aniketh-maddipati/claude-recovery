@@ -80,24 +80,23 @@ function overlayDirectory(src, dest) {
   }
 }
 
-export function setupScenario(name) {
+/**
+ * Build a Git sandbox from a fixture at `dest`.
+ * Shared by e2e tests (ephemeral .tmp-test/) and manual sandboxes (.sandbox/).
+ */
+export function setupFixtureSandbox(name, dest, { withBadAttempt = true } = {}) {
   const { fixtureDir, scenario } = loadScenario(name);
-  const tmp = join(
-    ROOT,
-    '.tmp-test',
-    `${name}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-  );
-  mkdirSync(tmp, { recursive: true });
+  mkdirSync(dest, { recursive: true });
 
-  cpSync(join(fixtureDir, 'clean'), tmp, { recursive: true });
-  git(['init'], tmp);
-  git(['config', 'user.email', 'test@example.com'], tmp);
-  git(['config', 'user.name', 'Test User'], tmp);
-  git(['add', '.'], tmp);
-  git(['commit', '-m', scenario.commitMessage ?? `Initial ${name} base`], tmp);
-  const cleanBaseSha = git(['rev-parse', 'HEAD'], tmp);
+  cpSync(join(fixtureDir, 'clean'), dest, { recursive: true });
+  git(['init'], dest);
+  git(['config', 'user.email', 'test@example.com'], dest);
+  git(['config', 'user.name', 'Test User'], dest);
+  git(['add', '.'], dest);
+  git(['commit', '-m', scenario.commitMessage ?? `Initial ${name} base`], dest);
+  const cleanBaseSha = git(['rev-parse', 'HEAD'], dest);
 
-  const recoveryDir = join(tmp, '.claude', 'recovery');
+  const recoveryDir = join(dest, '.claude', 'recovery');
   mkdirSync(recoveryDir, { recursive: true });
   writeFileSync(
     join(recoveryDir, 'scenario.json'),
@@ -129,15 +128,27 @@ export function setupScenario(name) {
     );
   }
 
-  overlayDirectory(join(fixtureDir, 'bad-attempt'), tmp);
-  cpSync(join(fixtureDir, 'decision.json'), join(recoveryDir, 'decision.json'));
+  if (withBadAttempt) {
+    overlayDirectory(join(fixtureDir, 'bad-attempt'), dest);
+    cpSync(join(fixtureDir, 'decision.json'), join(recoveryDir, 'decision.json'));
+  }
 
   const snapshots = {};
   for (const entry of scenario.expectations?.originalFilesUnchanged ?? []) {
-    snapshots[entry.path] = readFileSync(join(tmp, entry.path), 'utf8');
+    snapshots[entry.path] = readFileSync(join(dest, entry.path), 'utf8');
   }
 
-  return { tmp, cleanBaseSha, fixtureDir, scenario, snapshots };
+  return { sandbox: dest, cleanBaseSha, fixtureDir, scenario, snapshots };
+}
+
+export function setupScenario(name) {
+  const tmp = join(
+    ROOT,
+    '.tmp-test',
+    `${name}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  );
+  const ctx = setupFixtureSandbox(name, tmp, { withBadAttempt: true });
+  return { tmp, ...ctx };
 }
 
 export function cleanupScenario(tmp) {

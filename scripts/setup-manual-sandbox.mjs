@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Build a disposable Git sandbox inside this repo for manual /recover testing.
+ * Build a persistent Git sandbox under .sandbox/ for interactive /recover testing.
  *
  *   node scripts/setup-manual-sandbox.mjs
  *   node scripts/setup-manual-sandbox.mjs --with-bad-attempt
@@ -8,21 +8,13 @@
  *   node scripts/setup-manual-sandbox.mjs --scenario config-toggle
  */
 
-import {
-  cpSync,
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { setupFixtureSandbox, ROOT } from '../tests/harness/scenario-e2e.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(__dirname, '..');
 const SANDBOX_ROOT = join(ROOT, '.sandbox');
 
 function parseArgs(argv) {
@@ -43,89 +35,20 @@ function parseArgs(argv) {
   return options;
 }
 
-function git(args, cwd) {
-  const result = spawnSync('git', args, { cwd, encoding: 'utf8' });
-  if (result.status !== 0) {
-    throw new Error(`git ${args.join(' ')} failed: ${result.stderr}`);
-  }
-  return result.stdout.trim();
-}
-
-function overlayDirectory(src, dest) {
-  if (!existsSync(src)) return;
-  for (const entry of readdirSync(src, { withFileTypes: true })) {
-    const from = join(src, entry.name);
-    const to = join(dest, entry.name);
-    if (entry.isDirectory()) {
-      mkdirSync(to, { recursive: true });
-      overlayDirectory(from, to);
-    } else {
-      mkdirSync(dirname(to), { recursive: true });
-      cpSync(from, to);
-    }
-  }
-}
-
 function setupSandbox({ scenario, withBadAttempt, reset }) {
-  const fixtureDir = join(ROOT, 'fixtures', scenario);
-  if (!existsSync(join(fixtureDir, 'scenario.json'))) {
-    throw new Error(`Unknown scenario fixture: ${scenario}`);
-  }
-
   const sandbox = join(SANDBOX_ROOT, scenario);
   if (existsSync(sandbox)) {
     if (!reset && !withBadAttempt) {
       console.log(`Sandbox already exists: ${sandbox}`);
       printNextSteps(scenario, sandbox);
-      return;
+      return { sandbox, cleanBaseSha: null, withBadAttempt };
     }
     spawnSync('git', ['worktree', 'prune'], { cwd: sandbox, encoding: 'utf8' });
     rmSync(sandbox, { recursive: true, force: true });
   }
 
   mkdirSync(SANDBOX_ROOT, { recursive: true });
-  cpSync(join(fixtureDir, 'clean'), sandbox, { recursive: true });
-
-  git(['init'], sandbox);
-  git(['config', 'user.email', 'manual-test@example.com'], sandbox);
-  git(['config', 'user.name', 'Manual Test'], sandbox);
-  git(['add', '.'], sandbox);
-  git(['commit', '-m', `Initial ${scenario} sandbox base`], sandbox);
-  const cleanBaseSha = git(['rev-parse', 'HEAD'], sandbox);
-
-  const recoveryDir = join(sandbox, '.claude', 'recovery');
-  mkdirSync(recoveryDir, { recursive: true });
-  writeFileSync(
-    join(recoveryDir, 'scenario.json'),
-    `${JSON.stringify({ cleanBaseSha, name: scenario }, null, 2)}\n`,
-  );
-
-  const promptPath = join(fixtureDir, 'evidence', 'original-prompt.txt');
-  if (existsSync(promptPath)) {
-    const prompt = readFileSync(promptPath, 'utf8').trim();
-    writeFileSync(
-      join(recoveryDir, 'original-outcome.json'),
-      `${JSON.stringify({ text: prompt }, null, 2)}\n`,
-    );
-    writeFileSync(
-      join(recoveryDir, 'prompts.jsonl'),
-      `${JSON.stringify({
-        label: 'Observed evidence',
-        timestamp: new Date().toISOString(),
-        prompt,
-      })}\n`,
-    );
-  }
-
-  for (const file of ['boundaries.json', 'findings.json']) {
-    const src = join(fixtureDir, 'evidence', file);
-    if (existsSync(src)) cpSync(src, join(recoveryDir, file));
-  }
-
-  if (withBadAttempt) {
-    overlayDirectory(join(fixtureDir, 'bad-attempt'), sandbox);
-    cpSync(join(fixtureDir, 'decision.json'), join(recoveryDir, 'decision.json'));
-  }
+  const { cleanBaseSha } = setupFixtureSandbox(scenario, sandbox, { withBadAttempt });
 
   writeFileSync(
     join(sandbox, 'SANDBOX.md'),
@@ -140,7 +63,7 @@ function setupSandbox({ scenario, withBadAttempt, reset }) {
       `claude --plugin-dir ${ROOT}`,
       '```',
       '',
-      'Prompts: `manual-test/PROMPTS.md`',
+      'Prompts: `node scripts/run-manual-test.mjs --print-prompts`',
       '',
     ].join('\n'),
   );
@@ -154,6 +77,7 @@ function setupSandbox({ scenario, withBadAttempt, reset }) {
     pluginDir: ROOT,
   }, null, 2));
   printNextSteps(scenario, sandbox);
+  return { sandbox, cleanBaseSha, withBadAttempt };
 }
 
 function printNextSteps(scenario, sandbox) {
@@ -164,7 +88,7 @@ Next:
   claude --plugin-dir ${pluginDir}
 
 Prompts:
-  ${join(ROOT, 'manual-test', 'PROMPTS.md')}
+  node scripts/run-manual-test.mjs --print-prompts --scenario ${scenario}
 `);
 }
 
