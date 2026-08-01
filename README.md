@@ -34,6 +34,17 @@ Component directories live at the **plugin root**, not inside `.claude-plugin/`.
 
 No `npm install` is required. This repo has **zero npm dependencies**; scripts use Node.js built-ins only.
 
+### Dependencies
+
+| Kind | Required? | Notes |
+|------|-----------|-------|
+| Node.js 22+ | Yes | `npm run check:node` verifies version |
+| Git | Yes | Recovery, fixtures, and worktrees |
+| Claude Code CLI | Interactive only | Not needed for `npm test` |
+| `npm install` | No | No `dependencies` or `devDependencies` in `package.json` |
+
+External tools (`git`, `claude`) are system installs, not npm packages — nothing to lock, audit, or update in this repo.
+
 ## Local commands
 
 From the plugin root after cloning:
