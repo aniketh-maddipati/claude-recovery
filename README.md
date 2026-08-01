@@ -67,6 +67,9 @@ npm run setup-hooks:check
 | `npm run test:claude` | Live skill checks (requires authenticated Claude CLI) |
 | `npm run test:eval` | Live prompt evals (requires authenticated Claude CLI) |
 | `npm run demo` | Same as `./demo/run-demo.sh` — builds `.demo/auth-service` |
+| `npm run demo:config` | Pre-built **config-toggle** fixture (simplest Loom story) |
+| `npm run demo:live -- config-toggle` | Clean codebase — create the mistake live on camera |
+| `npm run demo:prompts` | Print copy-paste prompts (`demo/PROMPTS.md`) |
 | `npm run sandbox` | Reset `.sandbox/auth-service` with bad attempt for manual `/recover` |
 | `npm run sandbox:prompts` | Print copy-paste prompts for sandbox testing |
 | `npm run recovery -- <cmd>` | Pass-through to `scripts/recovery.mjs` (e.g. `npm run recovery -- inspect`) |
@@ -271,6 +274,8 @@ Golden scenario: `fixtures/auth-service/` (bad API migration; keep compat test; 
 npm run demo
 # or: ./demo/run-demo.sh
 ```
+
+**Copy-paste prompts and Loom-friendly scenarios:** [`demo/PROMPTS.md`](demo/PROMPTS.md)
 
 Follow the printed `claude --plugin-dir` command and the shot list in [`demo/RECORDING.md`](demo/RECORDING.md).
 

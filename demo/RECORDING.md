@@ -4,8 +4,11 @@ Prepare the fixture:
 
 ```bash
 ./demo/run-demo.sh
-# or: npm run demo
+# or: npm run demo              # auth-service (30-sec default)
+# or: npm run demo:config       # config-toggle (simplest for Loom)
 ```
+
+**All copy-paste prompts:** [`demo/PROMPTS.md`](PROMPTS.md)
 
 Run the printed `cd ... && claude --plugin-dir ...` command in a terminal with authenticated Claude Code. This is a real Git worktree — do not substitute an edited terminal recording.
 

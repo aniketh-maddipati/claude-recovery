@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Build a disposable auth-service demo fixture under .demo/auth-service.
- * Seeds commands.jsonl evidence for the 30-second silent demo recording.
+ * Build a disposable demo fixture under .demo/<scenario>.
+ * Seeds commands.jsonl evidence for Loom / silent demo recording.
  */
 
 import { existsSync, rmSync, writeFileSync } from 'node:fs';
@@ -9,10 +9,24 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { setupFixtureSandbox, ROOT } from '../tests/harness/scenario-e2e.mjs';
+import { getDemoScenario, listDemoScenarios } from './scenarios.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const DEMO_ROOT = join(ROOT, '.demo');
-export const DEMO_FIXTURE = join(DEMO_ROOT, 'auth-service');
+
+function parseArgs(argv) {
+  const options = { scenario: 'auth-service', print: false, list: false };
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    if (arg === '--print') options.print = true;
+    if (arg === '--list') options.list = true;
+    if (arg === '--scenario') {
+      options.scenario = argv[i + 1];
+      i += 1;
+    }
+  }
+  return options;
+}
 
 function runRecovery(args, cwd) {
   const result = spawnSync('node', [join(ROOT, 'scripts', 'recovery.mjs'), ...args], {
@@ -25,98 +39,56 @@ function runRecovery(args, cwd) {
   return JSON.parse(result.stdout);
 }
 
-function seedCommandsEvidence(recoveryDir) {
-  const commandsPath = join(recoveryDir, 'commands.jsonl');
-  const expiredTokenCommand =
-    "node -e \"import('./src/auth/provider.mjs').then(({AuthProvider})=>{const p=new AuthProvider('secret');console.log(JSON.stringify(p.verifyRequest({headers:{authorization:'Bearer expired-abc'}})));})\"";
-  const testCommand = 'node --test tests/auth-compat.test.mjs';
-
-  const records = [
-    {
-      label: 'Observed evidence',
-      phase: 'post',
-      timestamp: '2026-07-31T04:12:01.120Z',
-      sessionId: 'demo-auth-service',
-      command: expiredTokenCommand,
-      stdout: '{"ok":false,"reason":"invalid or expired token"}\n',
-      stderr: '',
-      interrupted: false,
-      durationMs: 42,
-    },
-    {
-      label: 'Observed evidence',
-      phase: 'post',
-      timestamp: '2026-07-31T04:12:08.210Z',
-      sessionId: 'demo-auth-service',
-      command: testCommand,
-      stdout: [
-        'TAP version 13',
-        '# Subtest: AuthProvider preserves authenticate(token) interface for clients',
-        'not ok 1 - AuthProvider preserves authenticate(token) interface for clients',
-        '  ---',
-        '  error: |-',
-        "    Expected values to be strictly equal:",
-        "    + 'undefined'",
-        "    - 'function'",
-        '  ...',
-        '# tests 1',
-        '# pass 0',
-        '# fail 1',
-      ].join('\n'),
-      stderr: '',
-      interrupted: false,
-      durationMs: 43,
-    },
-  ];
-
-  writeFileSync(commandsPath, records.map((r) => JSON.stringify(r)).join('\n') + '\n', 'utf8');
+export function demoFixturePath(scenarioName) {
+  return join(DEMO_ROOT, scenarioName);
 }
 
-export function setupDemoFixture({ reset = true } = {}) {
-  if (existsSync(DEMO_FIXTURE)) {
+export function setupDemoFixture({ scenario: scenarioName = 'auth-service', reset = true } = {}) {
+  const scenario = getDemoScenario(scenarioName);
+  const fixture = demoFixturePath(scenario.id);
+
+  if (existsSync(fixture)) {
     if (!reset) {
-      return { fixture: DEMO_FIXTURE, reused: true };
+      return { ok: true, scenario: scenario.id, fixture, reused: true };
     }
-    spawnSync('git', ['worktree', 'prune'], { cwd: DEMO_FIXTURE, encoding: 'utf8' });
-    rmSync(DEMO_FIXTURE, { recursive: true, force: true });
+    spawnSync('git', ['worktree', 'prune'], { cwd: fixture, encoding: 'utf8' });
+    rmSync(fixture, { recursive: true, force: true });
   }
 
-  const { cleanBaseSha } = setupFixtureSandbox('auth-service', DEMO_FIXTURE, {
+  const { cleanBaseSha } = setupFixtureSandbox(scenario.fixtureDir, fixture, {
     withBadAttempt: true,
   });
 
-  const recoveryDir = join(DEMO_FIXTURE, '.claude', 'recovery');
-  seedCommandsEvidence(recoveryDir);
-  runRecovery(['capture'], DEMO_FIXTURE);
+  const recoveryDir = join(fixture, '.claude', 'recovery');
+  scenario.seedCommandsEvidence(recoveryDir, writeFileSync);
+  runRecovery(['capture'], fixture);
 
   const pluginDir = process.env.CLAUDE_RECOVERY_PLUGIN_DIR || ROOT;
-  const launchCommand = `cd ${DEMO_FIXTURE} && claude --plugin-dir ${pluginDir}`;
+  const launchCommand = `cd ${fixture} && claude --plugin-dir ${pluginDir}`;
 
   return {
     ok: true,
-    fixture: DEMO_FIXTURE,
+    scenario: scenario.id,
+    loomTitle: scenario.loomTitle,
+    oneLiner: scenario.oneLiner,
+    story: scenario.story,
+    fixture,
     cleanBaseSha,
     pluginDir,
     launchCommand,
     reused: false,
-    decisionPaste:
-      'Keep the compatibility test and expired-token discovery. The API migration is rejected. Start from the clean base and use an adapter. Do not resume this session.',
-    demoCommands: {
-      originalOutcome: 'cat .claude/recovery/original-outcome.json',
-      diffStat: 'git diff --stat HEAD',
-      verifyRequest: "git diff HEAD -- src/auth/provider.mjs src/clients/api-client.mjs",
-      evidenceTail: 'tail -n 2 .claude/recovery/commands.jsonl',
-      recoverSkill: '/claude-recovery:recover',
-      contractFile: 'cat .claude/recovery/recovery-contract.md',
-      continuationContext:
-        "node -e \"const m=require('fs').readFileSync('.claude/recovery/recovery-manifest.json','utf8');console.log(JSON.parse(m).continuationContext)\"",
-    },
+    decisionPaste: scenario.decisionPaste,
+    approvePaste: scenario.approvePaste,
+    freshSessionPaste: scenario.freshSessionPaste,
+    demoCommands: scenario.demoCommands,
+    promptsFile: join(ROOT, 'demo', 'PROMPTS.md'),
   };
 }
 
 function printDemoInstructions(result) {
   console.log(`
-Demo fixture ready: ${result.fixture}
+Demo fixture ready (${result.scenario}): ${result.fixture}
+${result.loomTitle} — ${result.oneLiner}
 
 Run this in a terminal with authenticated Claude Code (120% zoom, crop to active pane):
 
@@ -128,26 +100,36 @@ When asked what to keep/reject/change, paste:
 
   ${result.decisionPaste}
 
-Approve the contract preview when shown.
+When the contract preview looks right:
+
+  ${result.approvePaste}
 
 After finalize, run the printed freshClaudeCommand (recommendedLaunchCommandInteractive)
 yourself in a new terminal — the plugin cannot start the fresh session for you.
 
-Shot list: demo/RECORDING.md
-`);
+In the fresh session, paste:
+
+  ${result.freshSessionPaste}
+
+Copy-paste prompts for all scenarios: demo/PROMPTS.md
+Shot list (30-sec): demo/RECORDING.md`);
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  const printMode = process.argv.includes('--print');
+  const options = parseArgs(process.argv.slice(2));
+  if (options.list) {
+    console.log(listDemoScenarios().join('\n'));
+    process.exit(0);
+  }
   try {
-    const result = setupDemoFixture();
-    if (printMode) {
+    const result = setupDemoFixture({ scenario: options.scenario });
+    if (options.print) {
       printDemoInstructions(result);
     } else {
       console.log(JSON.stringify(result, null, 2));
     }
   } catch (err) {
-    if (printMode) {
+    if (options.print) {
       console.error(`Demo setup failed: ${err.message}`);
     } else {
       console.error(JSON.stringify({ ok: false, error: err.message }, null, 2));
@@ -155,3 +137,6 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     process.exit(1);
   }
 }
+
+// Back-compat for tests importing DEMO_FIXTURE
+export const DEMO_FIXTURE = demoFixturePath('auth-service');
