@@ -1,18 +1,68 @@
 #!/usr/bin/env node
 /**
  * Build a disposable demo fixture under .demo/<scenario>.
- * Seeds commands.jsonl evidence for Loom / silent demo recording.
+ *
+ * This is a deterministic mixed-attempt fixture: clean base + rejected overlay.
+ * It does NOT pre-seed decision.json, fake commands.jsonl, or approved contracts.
+ * Real PostToolUse evidence is captured during the Claude Code recording.
  */
 
-import { existsSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { setupFixtureSandbox, ROOT } from '../tests/harness/scenario-e2e.mjs';
 import { getDemoScenario, listDemoScenarios } from './scenarios.mjs';
+import { buildPluginZip, defaultPluginZipPath } from '../scripts/build-plugin-zip.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const DEMO_ROOT = join(ROOT, '.demo');
+
+/** Session artifacts that must not exist until the real Claude Code recording. */
+const DEMO_EPHEMERAL_RECOVERY_FILES = [
+  'commands.jsonl',
+  'decision.json',
+  'recovery-manifest.json',
+  'pending-contract.json',
+  'evidence.json',
+  'patches-index.json',
+  'boundary-verification.json',
+  'injection-audit.jsonl',
+  'patch-application-errors.json',
+  'recovery-contract.md',
+];
+
+export function stripDemoSessionArtifacts(fixture) {
+  const recoveryDir = join(fixture, '.claude', 'recovery');
+  if (existsSync(recoveryDir)) {
+    for (const name of DEMO_EPHEMERAL_RECOVERY_FILES) {
+      rmSync(join(recoveryDir, name), { force: true });
+    }
+    rmSync(join(recoveryDir, 'patches'), { recursive: true, force: true });
+  }
+  rmSync(join(fixture, '.claude', 'recovery-worktrees'), { recursive: true, force: true });
+}
+
+export function assertHonestDemoFixture(fixture) {
+  const recoveryDir = join(fixture, '.claude', 'recovery');
+  const checks = [
+    ['decision.json', join(recoveryDir, 'decision.json')],
+    ['commands.jsonl', join(recoveryDir, 'commands.jsonl')],
+    ['recovery-manifest.json', join(recoveryDir, 'recovery-manifest.json')],
+    ['pending-contract.json', join(recoveryDir, 'pending-contract.json')],
+  ];
+  for (const [label, path] of checks) {
+    if (label === 'commands.jsonl') {
+      if (existsSync(path) && readFileSync(path, 'utf8').trim()) {
+        throw new Error(`${label} was pre-seeded`);
+      }
+      continue;
+    }
+    if (existsSync(path)) {
+      throw new Error(`${label} was pre-seeded`);
+    }
+  }
+}
 
 function parseArgs(argv) {
   const options = { scenario: 'auth-service', print: false, list: false };
@@ -26,17 +76,6 @@ function parseArgs(argv) {
     }
   }
   return options;
-}
-
-function runRecovery(args, cwd) {
-  const result = spawnSync('node', [join(ROOT, 'scripts', 'recovery.mjs'), ...args], {
-    cwd,
-    encoding: 'utf8',
-  });
-  if (result.status !== 0) {
-    throw new Error(`recovery.mjs ${args.join(' ')} failed: ${result.stderr || result.stdout}`);
-  }
-  return JSON.parse(result.stdout);
 }
 
 export function demoFixturePath(scenarioName) {
@@ -56,63 +95,100 @@ export function setupDemoFixture({ scenario: scenarioName = 'auth-service', rese
   }
 
   const { cleanBaseSha } = setupFixtureSandbox(scenario.fixtureDir, fixture, {
-    withBadAttempt: true,
+    withRejectedAttempt: true,
+    seedDecision: false,
+    seedCommandEvidence: false,
   });
 
-  const recoveryDir = join(fixture, '.claude', 'recovery');
-  scenario.seedCommandsEvidence(recoveryDir, writeFileSync);
-  runRecovery(['capture'], fixture);
+  stripDemoSessionArtifacts(fixture);
+  assertHonestDemoFixture(fixture);
 
-  const pluginDir = process.env.CLAUDE_RECOVERY_PLUGIN_DIR || ROOT;
+  let pluginZipPath = existsSync(defaultPluginZipPath()) ? defaultPluginZipPath() : null;
+  try {
+    pluginZipPath = buildPluginZip({ quiet: true }).path;
+  } catch {
+    // zip optional when `zip` is not installed; directory launch still works
+  }
+
+  const pluginDir =
+    process.env.CLAUDE_RECOVERY_PLUGIN_DIR || pluginZipPath || ROOT;
   const launchCommand = `cd ${fixture} && claude --plugin-dir ${pluginDir}`;
+  const directoryLaunchCommand = `cd ${fixture} && claude --plugin-dir ${ROOT}`;
 
   return {
     ok: true,
     scenario: scenario.id,
+    mode: 'deterministic-fixture',
+    note:
+      'Deterministic mixed-attempt fixture: rejected Git overlay + useful test. ' +
+      'Not proof that Claude independently violated an instruction. ' +
+      'commands.jsonl and decision.json are intentionally absent until the real session.',
     loomTitle: scenario.loomTitle,
     oneLiner: scenario.oneLiner,
     story: scenario.story,
     fixture,
     cleanBaseSha,
     pluginDir,
+    pluginZipPath,
     launchCommand,
+    directoryLaunchCommand,
     reused: false,
+    evidencePaste: scenario.evidencePaste,
     decisionPaste: scenario.decisionPaste,
     approvePaste: scenario.approvePaste,
+    recoverPaste: scenario.recoverPaste,
     freshSessionPaste: scenario.freshSessionPaste,
     demoCommands: scenario.demoCommands,
     promptsFile: join(ROOT, 'demo', 'PROMPTS.md'),
+    startingState: {
+      gitDiff: 'present (rejected attempt overlay)',
+      usefulTest: 'present',
+      commandsJsonl: 'absent',
+      decisionJson: 'absent',
+      recoveryManifest: 'absent',
+      approvedPendingContract: 'absent',
+    },
   };
 }
 
+function indentBlock(text, prefix = '  ') {
+  return String(text)
+    .split('\n')
+    .map((line) => (line.length ? `${prefix}${line}` : ''))
+    .join('\n');
+}
+
 function printDemoInstructions(result) {
+  const wtHelper = `node ${join(ROOT, 'demo/demo-cmd.mjs')} worktree`;
+  const worktreeCmd = `cd "$(${wtHelper})" && git diff --name-only`;
+  const freshCmd = `cd "$(${wtHelper})" && claude --plugin-dir "$CLAUDE_RECOVERY_PLUGIN_DIR"`;
+
   console.log(`
-Demo fixture ready (${result.scenario}): ${result.fixture}
-${result.loomTitle} — ${result.oneLiner}
+Demo ready: ${result.fixture}
+Teleprompter: demo/PROMPTS.md
+Plugin zip: ${result.pluginDir}
 
-Run this in a terminal with authenticated Claude Code (120% zoom, crop to active pane):
+── Run once ──
+export CLAUDE_RECOVERY_PLUGIN_DIR=${result.pluginDir}
 
-  ${result.launchCommand}
+── Step 0 — fixture ──
+${indentBlock(result.launchCommand)}
 
-Then invoke: /claude-recovery:recover
+── TYPE into Claude ──
+3  ${result.evidencePaste}
+4  ${result.recoverPaste}
+5  ${result.decisionPaste}
+6  ${result.approvePaste}
 
-When asked what to keep/reject/change, paste:
+── Step 7 — worktree ──
+${indentBlock(worktreeCmd)}
 
-  ${result.decisionPaste}
+── Step 8 — fresh Claude ──
+${indentBlock(freshCmd)}
+9  ${result.freshSessionPaste}
 
-When the contract preview looks right:
-
-  ${result.approvePaste}
-
-After finalize, run the printed freshClaudeCommand (recommendedLaunchCommandInteractive)
-yourself in a new terminal — the plugin cannot start the fresh session for you.
-
-In the fresh session, paste:
-
-  ${result.freshSessionPaste}
-
-Copy-paste prompts for all scenarios: demo/PROMPTS.md
-Shot list (30-sec): demo/RECORDING.md`);
+Full teleprompter: demo/PROMPTS.md
+`);
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

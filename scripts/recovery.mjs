@@ -2,8 +2,13 @@
 /**
  * claude-recovery helper CLI — deterministic Git-backed recovery operations.
  * Requires a Git repository with at least one commit.
+ *
+ * Lifecycle (mechanically enforced):
+ *   capture → inspect → write decision → preview → approve → finalize → verify
+ * Finalize never silently approves. Digests bind the approved decision + plan.
  */
 
+import { createHash } from 'node:crypto';
 import {
   copyFileSync,
   existsSync,
@@ -29,12 +34,14 @@ Commands:
   preview --decision-file <path>
   approve --decision-file <path>
   finalize --decision-file <path> [--name <name>] [--base <sha>]
+  receipt --manifest <path>
   verify-boundaries --manifest <path> [--worktree <path>]
   create-worktree --base <sha> --name <name>
   apply-selected-patches --manifest <path>
   launch-instructions --manifest <path>
 
-Native hooks (reliable SessionStart injection): node scripts/setup-hooks.mjs
+SessionStart handoff: plugin-scoped hooks (hooks/hooks.json) are primary.
+Optional compatibility fallback: node scripts/setup-hooks.mjs
 `);
 }
 
@@ -108,6 +115,56 @@ function parseArgs(argv) {
     }
   }
   return { command, options };
+}
+
+function sha256Hex(value) {
+  return createHash('sha256').update(value).digest('hex');
+}
+
+/** Deterministic JSON serialization for plan digests (sorted object keys). */
+function stableStringify(value) {
+  if (value === undefined) return 'null';
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableStringify(item)).join(',')}]`;
+  }
+  const keys = Object.keys(value).sort();
+  return `{${keys.map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`;
+}
+
+function decisionFileDigest(decisionPath) {
+  return sha256Hex(readFileSync(decisionPath));
+}
+
+function patchIdentity(patch) {
+  return {
+    path: patch.path,
+    kind: patch.kind ?? null,
+    patchFile: patch.patchFile ?? null,
+    fullFile: patch.fullFile ?? null,
+  };
+}
+
+function planDigestPayload(manifest) {
+  return {
+    decisionDigest: manifest.decisionSha256,
+    sourceSha: manifest.sourceSha,
+    baseSha: manifest.baseSha,
+    selectedPatches: (manifest.selectedPatches ?? []).map(patchIdentity),
+    discardedPatchPaths: (manifest.discardedPatches ?? []).map((p) => p.path).sort(),
+    boundaryFiles: [...(manifest.boundaryFiles ?? [])].sort(),
+    forbiddenPatterns: [...(manifest.forbiddenPatterns ?? [])].sort(),
+    contextMode: manifest.contextMode ?? null,
+    verificationCommand: manifest.verificationCommand ?? null,
+    continuationContext: manifest.continuationContext ?? null,
+    contractText: manifest.contractText ?? null,
+  };
+}
+
+function computePlanDigest(manifest) {
+  return sha256Hex(stableStringify(planDigestPayload(manifest)));
 }
 
 function listChangedFiles(cwd) {
@@ -387,8 +444,13 @@ function selectPatches(cwd, decision) {
   return { selected, discarded: finalDiscarded, sourceSha: index?.sourceSha ?? requireGitRepo(cwd) };
 }
 
-function previewRecovery(cwd, decisionPath, { approved = false } = {}) {
+/**
+ * Build the recovery plan from the current decision + frozen patch index.
+ * Does not write approval state or pending contracts.
+ */
+function buildRecoveryPlan(cwd, decisionPath) {
   const decision = readJson(decisionPath);
+  const decisionSha256 = decisionFileDigest(decisionPath);
   const baseSha = resolveBaseSha(cwd, decision);
   const { selected, discarded, sourceSha } = selectPatches(cwd, decision);
 
@@ -398,10 +460,14 @@ function previewRecovery(cwd, decisionPath, { approved = false } = {}) {
     selectedPatches: selected,
     discardedPatches: discarded,
     contextMode: decision.next?.contextMode ?? 'fresh',
-    approved,
+    approved: false,
+    decisionSha256,
+    planSha256: null,
+    approvedDecisionSha256: null,
+    approvedPlanSha256: null,
     timestamps: {
       previewedAt: new Date().toISOString(),
-      approvedAt: approved ? new Date().toISOString() : null,
+      approvedAt: null,
     },
     userDecision: decision.userDecision ?? '',
     originalOutcome: decision.originalOutcome ?? '',
@@ -418,32 +484,120 @@ function previewRecovery(cwd, decisionPath, { approved = false } = {}) {
   manifest.contractText = buildContractMarkdown(decision, manifest);
   manifest.boundaryFiles = decision.boundaryFiles ?? decision.discard?.files ?? [];
   manifest.forbiddenPatterns = decision.forbiddenPatterns ?? [];
+  manifest.planSha256 = computePlanDigest(manifest);
+
+  return manifest;
+}
+
+function previewRecovery(cwd, decisionPath) {
+  const manifest = buildRecoveryPlan(cwd, decisionPath);
+  // Preview is never approved and must not write an approved pending contract.
+  manifest.approved = false;
+  manifest.approvedDecisionSha256 = null;
+  manifest.approvedPlanSha256 = null;
+  manifest.timestamps.approvedAt = null;
 
   const root = ensureRecoveryDir(cwd);
   writeFileSync(join(root, 'recovery-contract.md'), `${manifest.contractText}\n`, 'utf8');
   writeJson(join(root, 'recovery-manifest.json'), manifest);
 
+  const pendingPath = join(root, 'pending-contract.json');
+  if (existsSync(pendingPath)) {
+    const existing = readOptionalJson(pendingPath);
+    // Clear prior approval so an unapproved preview cannot leave an approved pending contract.
+    if (existing?.approved) {
+      writeJson(pendingPath, {
+        ...existing,
+        approved: false,
+        clearedBy: 'preview',
+        clearedAt: new Date().toISOString(),
+      });
+    }
+  }
+
   return manifest;
 }
 
 function approveRecovery(cwd, decisionPath) {
-  const manifest = previewRecovery(cwd, decisionPath, { approved: true });
+  const manifest = buildRecoveryPlan(cwd, decisionPath);
+  const approvedAt = new Date().toISOString();
   manifest.approved = true;
-  manifest.timestamps.approvedAt = new Date().toISOString();
-  writeJson(join(recoveryRoot(cwd), 'recovery-manifest.json'), manifest);
+  manifest.approvedDecisionSha256 = manifest.decisionSha256;
+  manifest.approvedPlanSha256 = manifest.planSha256;
+  manifest.timestamps.previewedAt =
+    readOptionalJson(join(recoveryRoot(cwd), 'recovery-manifest.json'))?.timestamps?.previewedAt ??
+    manifest.timestamps.previewedAt;
+  manifest.timestamps.approvedAt = approvedAt;
+
+  const root = ensureRecoveryDir(cwd);
+  writeFileSync(join(root, 'recovery-contract.md'), `${manifest.contractText}\n`, 'utf8');
+  writeJson(join(root, 'recovery-manifest.json'), manifest);
 
   const pending = {
     approved: true,
-    approvedAt: manifest.timestamps.approvedAt,
+    approvedAt,
+    approvedDecisionSha256: manifest.approvedDecisionSha256,
+    approvedPlanSha256: manifest.approvedPlanSha256,
     contractText: manifest.contractText,
     continuationContext: manifest.continuationContext,
-    manifestPath: join(recoveryRoot(cwd), 'recovery-manifest.json'),
+    manifestPath: join(root, 'recovery-manifest.json'),
     baseSha: manifest.baseSha,
     contextMode: manifest.contextMode,
   };
-  writeJson(join(recoveryRoot(cwd), 'pending-contract.json'), pending);
+  writeJson(join(root, 'pending-contract.json'), pending);
 
   return manifest;
+}
+
+function approvalMismatchError(detail) {
+  return new Error(
+    `${detail} Rerun: node scripts/recovery.mjs preview --decision-file <path> ` +
+      `then node scripts/recovery.mjs approve --decision-file <path> before finalize.`,
+  );
+}
+
+function requireApprovedManifest(cwd, decisionPath) {
+  const manifestPath = join(recoveryRoot(cwd), 'recovery-manifest.json');
+  if (!existsSync(manifestPath)) {
+    throw approvalMismatchError(
+      'Finalize requires an approved recovery manifest, but none exists.',
+    );
+  }
+
+  const approvedManifest = readJson(manifestPath);
+  if (!approvedManifest.approved) {
+    throw approvalMismatchError(
+      'Finalize refused: recovery manifest is not approved.',
+    );
+  }
+  if (!approvedManifest.approvedDecisionSha256 || !approvedManifest.approvedPlanSha256) {
+    throw approvalMismatchError(
+      'Finalize refused: approved manifest is missing decision/plan digests.',
+    );
+  }
+
+  const currentDecisionDigest = decisionFileDigest(decisionPath);
+  if (currentDecisionDigest !== approvedManifest.approvedDecisionSha256) {
+    throw approvalMismatchError(
+      'Finalize refused: decision.json changed after approval ' +
+        `(expected ${approvedManifest.approvedDecisionSha256}, got ${currentDecisionDigest}).`,
+    );
+  }
+
+  const currentPlan = buildRecoveryPlan(cwd, decisionPath);
+  if (currentPlan.planSha256 !== approvedManifest.approvedPlanSha256) {
+    throw approvalMismatchError(
+      'Finalize refused: recovery plan changed after approval ' +
+        `(expected ${approvedManifest.approvedPlanSha256}, got ${currentPlan.planSha256}).`,
+    );
+  }
+  if (currentPlan.decisionSha256 !== approvedManifest.approvedDecisionSha256) {
+    throw approvalMismatchError(
+      'Finalize refused: decision digest no longer matches the approved value.',
+    );
+  }
+
+  return { manifestPath, approvedManifest };
 }
 
 function createWorktree(cwd, baseSha, name) {
@@ -481,6 +635,7 @@ function seedWorktreePendingContract(sourceCwd, worktreePath) {
   mkdirSync(wtRecovery, { recursive: true });
 
   pending.worktreePath = worktreePath;
+  pending.worktreeName = worktreePath.split(/[/\\]/).pop() ?? null;
   pending.seededFrom = sourcePending;
   pending.seededAt = new Date().toISOString();
   // Fresh worktree session has not injected yet.
@@ -569,6 +724,7 @@ function updateManifestWorktree(cwd, manifestPath, worktreeInfo) {
   if (existsSync(pendingPath)) {
     const pending = readJson(pendingPath);
     pending.worktreePath = worktreeInfo.path;
+    pending.worktreeName = worktreeInfo.name;
     writeJson(pendingPath, pending);
   }
 
@@ -583,10 +739,15 @@ function shellSingleQuote(value) {
   return `'${String(value).replace(/'/g, `'\\''`)}'`;
 }
 
+function shortSha(sha) {
+  if (!sha) return '(unknown)';
+  return String(sha).slice(0, 12);
+}
+
 function launchInstructions(cwd, manifestPath) {
   const manifest = readJson(manifestPath);
   const wtPath = manifest.worktreePath ?? '<worktree-path>';
-  const pluginDir = resolve(__dirname, '..');
+  const pluginDir = process.env.CLAUDE_RECOVERY_PLUGIN_DIR || resolve(__dirname, '..');
   const worktreeContractPath = join(wtPath, RECOVERY_DIR, 'pending-contract.json');
   const sourceContractPath = join(recoveryRoot(cwd), 'pending-contract.json');
   const contractPath = existsSync(worktreeContractPath)
@@ -600,11 +761,14 @@ function launchInstructions(cwd, manifestPath) {
     ? contractFileInWorktree
     : join(recoveryRoot(cwd), 'recovery-contract.md');
 
+  // Primary recommended launch: interactive Claude Code (no -p).
   const interactiveLaunch =
     `cd ${shellSingleQuote(wtPath)} && claude --plugin-dir ${shellSingleQuote(pluginDir)}`;
-  const contractLaunch =
-    `${interactiveLaunch} -p "$(cat ${contractFileRel})"`;
-  const setupHooksHint = 'node scripts/setup-hooks.mjs  # one-time, for native SessionStart injection';
+  // Headless / non-interactive fallback embeds the contract via -p.
+  const headlessLaunch =
+    `${interactiveLaunch} -p "$(cat ${shellSingleQuote(contractFileRel)})"`;
+  const setupHooksHint =
+    'node scripts/setup-hooks.mjs  # optional compatibility fallback for native SessionStart';
 
   const output = {
     label: 'User decision',
@@ -612,13 +776,15 @@ function launchInstructions(cwd, manifestPath) {
     manifestPath,
     contractPath: hasPending ? contractPath : null,
     contractFile: existsSync(contractFile) ? contractFile : null,
+    developerMustLaunchManually: true,
     hookInjection: hasPending
       ? {
           label: 'Inferred suggestion',
           detail:
-            'SessionStart reads .claude/recovery/pending-contract.json from the worktree cwd. ' +
-            'Plugin hooks may not inject additionalContext on all builds (#16538). ' +
-            'Run setup-hooks.mjs once for native hooks, or use recommendedLaunchCommand which embeds the contract via -p.',
+            'Primary handoff: plugin-scoped SessionStart reads .claude/recovery/pending-contract.json ' +
+            'from the worktree cwd and injects the approved Recovery Contract. ' +
+            'Optional fallback: run setup-hooks.mjs once for native ~/.claude/settings.json hooks. ' +
+            'Headless fallback: recommendedLaunchCommandHeadless embeds the contract via -p (non-interactive).',
           pendingContractPath: contractPath,
           setupHooksCommand: setupHooksHint,
         }
@@ -630,18 +796,40 @@ function launchInstructions(cwd, manifestPath) {
       instruction:
         'If the new session does not acknowledge the Recovery Contract, Paste recovery-contract.md as your first message.',
     },
-    recommendedLaunchCommand: contractLaunch,
+    // Interactive session — developer runs this manually.
+    recommendedLaunchCommand: interactiveLaunch,
+    // Headless / non-interactive (-p). Not an interactive session.
+    recommendedLaunchCommandHeadless: headlessLaunch,
+    // Deprecated alias of the interactive command; prefer recommendedLaunchCommand.
     recommendedLaunchCommandInteractive: interactiveLaunch,
     setupNativeHooksCommand: setupHooksHint,
     limitations: [
       'This plugin cannot invoke /clear or move an existing session.',
       'The developer must start Claude Code in the recovery worktree manually.',
-      'recommendedLaunchCommand embeds recovery-contract.md via -p for reliability.',
-      'For ambient SessionStart injection, run setup-hooks.mjs once (native hooks).',
+      'recommendedLaunchCommand is interactive (no -p). Plugin SessionStart injects the approved contract.',
+      'recommendedLaunchCommandHeadless uses -p and is non-interactive.',
+      'Native setup-hooks.mjs is an optional compatibility fallback, not required for normal use.',
     ],
   };
 
   return output;
+}
+
+function searchTreeForPattern(root, pattern) {
+  const hits = [];
+  const re = new RegExp(pattern);
+  function walk(dir) {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const abs = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(abs);
+      } else if (re.test(readFileSync(abs, 'utf8'))) {
+        hits.push(relative(root, abs));
+      }
+    }
+  }
+  walk(root);
+  return hits;
 }
 
 function verifyBoundaries(cwd, manifestPath, { worktreePath: wtOverride } = {}) {
@@ -657,7 +845,6 @@ function verifyBoundaries(cwd, manifestPath, { worktreePath: wtOverride } = {}) 
   }
 
   const filesToCheck = manifest.boundaryFiles ?? [];
-
   const forbiddenPatterns = manifest.forbiddenPatterns ?? [];
   const results = [];
 
@@ -704,44 +891,113 @@ function verifyBoundaries(cwd, manifestPath, { worktreePath: wtOverride } = {}) 
   const ok = results.every((r) => r.ok);
   const output = { ok, label: 'Observed evidence', baseSha, worktreePath: wtPath, checks: results };
   writeJson(join(recoveryRoot(cwd), 'boundary-verification.json'), output);
+  // Also seed into worktree for receipt / demo inspection.
+  if (existsSync(wtPath)) {
+    mkdirSync(join(wtPath, RECOVERY_DIR), { recursive: true });
+    writeJson(join(wtPath, RECOVERY_DIR, 'boundary-verification.json'), output);
+  }
   return output;
 }
 
-function searchTreeForPattern(root, pattern) {
-  const hits = [];
-  const re = new RegExp(pattern);
-  function walk(dir) {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const abs = join(dir, entry.name);
-      if (entry.isDirectory()) {
-        walk(abs);
-      } else if (re.test(readFileSync(abs, 'utf8'))) {
-        hits.push(relative(root, abs));
-      }
-    }
-  }
-  walk(root);
-  return hits;
+function formatReceipt(cwd, manifestPath) {
+  const manifest = readJson(manifestPath);
+  const launch = launchInstructions(cwd, manifestPath);
+  const boundaryPath = join(recoveryRoot(cwd), 'boundary-verification.json');
+  const boundary = existsSync(boundaryPath) ? readJson(boundaryPath) : null;
+  const kept = (manifest.selectedPatches ?? []).map((p) => p.path);
+  const discarded = (manifest.discardedPatches ?? []).map((p) => p.path);
+  const boundaryStatus = boundary
+    ? boundary.ok
+      ? 'PASS'
+      : 'FAIL'
+    : 'NOT RUN';
+
+  const lines = [
+    'RECOVERY READY',
+    '',
+    'Base',
+    shortSha(manifest.baseSha),
+    '',
+    'Kept',
+    ...(kept.length ? kept : ['(none)']),
+    '',
+    'Discarded',
+    ...(discarded.length ? discarded : ['(none)']),
+    '',
+    'Boundary verification',
+    boundaryStatus,
+    '',
+    'Fresh worktree',
+    manifest.worktreePath ?? '(not created)',
+    '',
+    'Launch manually',
+    launch.recommendedLaunchCommand,
+  ];
+
+  return {
+    text: `${lines.join('\n')}\n`,
+    receipt: {
+      baseSha: manifest.baseSha,
+      baseShaShort: shortSha(manifest.baseSha),
+      kept,
+      discarded,
+      boundaryVerification: boundaryStatus,
+      worktreePath: manifest.worktreePath ?? null,
+      recommendedLaunchCommand: launch.recommendedLaunchCommand,
+      recommendedLaunchCommandHeadless: launch.recommendedLaunchCommandHeadless,
+    },
+  };
 }
 
 function finalizeRecovery(cwd, decisionPath, { baseSha, name } = {}) {
-  const decision = readJson(decisionPath);
-  const resolvedBase = baseSha ?? resolveBaseSha(cwd, decision);
+  // Approval is a prior explicit step. Finalize never calls approveRecovery.
+  const { manifestPath, approvedManifest } = requireApprovedManifest(cwd, decisionPath);
+
+  const resolvedBase = baseSha ?? approvedManifest.baseSha;
   const worktreeName = name ?? `recovery-${Date.now()}`;
 
-  const manifest = approveRecovery(cwd, decisionPath);
+  // Create worktree only after all approval validation succeeds.
   const worktree = createWorktree(cwd, resolvedBase, worktreeName);
-  const manifestPath = join(recoveryRoot(cwd), 'recovery-manifest.json');
   updateManifestWorktree(cwd, manifestPath, worktree);
-  const applied = applySelectedPatches(cwd, manifestPath);
+
+  let applied;
+  try {
+    applied = applySelectedPatches(cwd, manifestPath);
+  } catch (err) {
+    // Source worktree remains unchanged; leave inspectable error artifact.
+    throw err;
+  }
+
+  const boundaries = verifyBoundaries(cwd, manifestPath);
+  if (!boundaries.ok) {
+    const reportPath = join(recoveryRoot(cwd), 'boundary-verification.json');
+    throw new Error(
+      `Boundary verification failed after finalize. See ${reportPath}. ` +
+        `Checks: ${JSON.stringify(boundaries.checks)}`,
+    );
+  }
+
+  const finalManifest = readJson(manifestPath);
+  finalManifest.boundaryVerification = {
+    ok: boundaries.ok,
+    verifiedAt: new Date().toISOString(),
+  };
+  finalManifest.finalizedAt = new Date().toISOString();
+  writeJson(manifestPath, finalManifest);
+
   const launch = launchInstructions(cwd, manifestPath);
+  const { text: receiptText, receipt } = formatReceipt(cwd, manifestPath);
 
   return {
     ok: true,
-    manifest: readJson(manifestPath),
+    manifest: finalManifest,
     worktree,
     applied,
+    boundaries,
     launch,
+    receipt,
+    receiptText,
+    note: 'Developer must run recommendedLaunchCommand manually. Plugin does not start Claude or invoke /clear.',
   };
 }
 
@@ -779,7 +1035,21 @@ function main() {
           baseSha: options.base,
           name: options.name,
         });
-        console.log(JSON.stringify(result, null, 2));
+        if (options.format === 'compact') {
+          process.stdout.write(result.receiptText);
+        } else {
+          console.log(JSON.stringify(result, null, 2));
+        }
+        break;
+      }
+      case 'receipt': {
+        if (!options.manifest) throw new Error('--manifest is required');
+        const { text, receipt } = formatReceipt(cwd, resolve(cwd, options.manifest));
+        if (options.format === 'json') {
+          console.log(JSON.stringify({ ok: true, receipt }, null, 2));
+        } else {
+          process.stdout.write(text);
+        }
         break;
       }
       case 'create-worktree': {

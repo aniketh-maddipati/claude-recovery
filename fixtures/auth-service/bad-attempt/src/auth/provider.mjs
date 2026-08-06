@@ -4,7 +4,8 @@ export class AuthProvider {
   }
 
   /**
-   * BAD ATTEMPT: changed exported interface — breaks existing clients.
+   * Rejected attempt: changed exported interface — breaks existing clients.
+   * Deterministic fixture overlay (not proof of independent instruction violation).
    * @param {{ headers: Record<string, string> }} request
    */
   verifyRequest(request) {

@@ -83,8 +83,18 @@ function overlayDirectory(src, dest) {
 /**
  * Build a Git sandbox from a fixture at `dest`.
  * Shared by e2e tests (ephemeral .tmp-test/) and manual sandboxes (.sandbox/).
+ *
+ * Options:
+ *   withRejectedAttempt / withBadAttempt — overlay the deterministic rejected attempt
+ *   seedDecision — copy fixtures/<name>/decision.json (test harness default: true when rejected)
+ *   seedCommandEvidence — write fake commands.jsonl (default: false; recording must capture real hooks)
  */
-export function setupFixtureSandbox(name, dest, { withBadAttempt = true } = {}) {
+export function setupFixtureSandbox(name, dest, {
+  withBadAttempt = true,
+  withRejectedAttempt = withBadAttempt,
+  seedDecision = withRejectedAttempt,
+  seedCommandEvidence = false,
+} = {}) {
   const { fixtureDir, scenario } = loadScenario(name);
   mkdirSync(dest, { recursive: true });
 
@@ -128,9 +138,22 @@ export function setupFixtureSandbox(name, dest, { withBadAttempt = true } = {}) 
     );
   }
 
-  if (withBadAttempt) {
+  if (withRejectedAttempt) {
     overlayDirectory(join(fixtureDir, 'bad-attempt'), dest);
-    cpSync(join(fixtureDir, 'decision.json'), join(recoveryDir, 'decision.json'));
+  }
+
+  if (seedDecision) {
+    const decisionSrc = join(fixtureDir, 'decision.json');
+    if (existsSync(decisionSrc)) {
+      cpSync(decisionSrc, join(recoveryDir, 'decision.json'));
+    }
+  }
+
+  if (seedCommandEvidence) {
+    const commandsSrc = join(fixtureDir, 'evidence', 'commands.jsonl');
+    if (existsSync(commandsSrc)) {
+      cpSync(commandsSrc, join(recoveryDir, 'commands.jsonl'));
+    }
   }
 
   const snapshots = {};
@@ -138,7 +161,14 @@ export function setupFixtureSandbox(name, dest, { withBadAttempt = true } = {}) 
     snapshots[entry.path] = readFileSync(join(dest, entry.path), 'utf8');
   }
 
-  return { sandbox: dest, cleanBaseSha, fixtureDir, scenario, snapshots };
+  return {
+    sandbox: dest,
+    cleanBaseSha,
+    fixtureDir,
+    scenario,
+    snapshots,
+    options: { withRejectedAttempt, seedDecision, seedCommandEvidence },
+  };
 }
 
 export function setupScenario(name) {
@@ -306,6 +336,14 @@ export function runScenarioE2E(name, { worktreeName = `recovery-${name}` } = {})
     );
     assert.ok(instructions.manualFallback);
     assert.ok(instructions.recommendedLaunchCommand.includes('claude --plugin-dir'));
+    assert.ok(
+      !instructions.recommendedLaunchCommand.includes(' -p '),
+      'recommendedLaunchCommand must be interactive (no -p)',
+    );
+    assert.ok(
+      instructions.recommendedLaunchCommandHeadless.includes(' -p '),
+      'recommendedLaunchCommandHeadless must include -p',
+    );
     for (const fragment of expect.manualFallbackMustInclude ?? []) {
       const haystack = `${instructions.manualFallback.contractText}\n${instructions.manualFallback.instruction}`;
       assert.ok(haystack.includes(fragment), `manual fallback missing: ${fragment}`);

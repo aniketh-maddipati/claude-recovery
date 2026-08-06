@@ -129,7 +129,13 @@ function handleSessionStart(input) {
     sessionId: input.session_id ?? null,
   });
 
+  const worktreeName =
+    pending.worktreeName ??
+    (pending.worktreePath ? String(pending.worktreePath).split(/[/\\]/).pop() : null);
+  const sessionTitle = worktreeName ? `recovery: ${worktreeName}` : 'recovery: approved contract';
+
   const additionalContext = [
+    `Session title: ${sessionTitle}`,
     'Recovery Contract (approved by developer — User decision):',
     contractText,
     '',
@@ -138,6 +144,8 @@ function handleSessionStart(input) {
     'Inferred suggestion = optional grouping, never fact.',
   ].join('\n');
 
+  // Emit only documented hook fields for compatibility. Session title is carried
+  // in additionalContext so older Claude Code builds ignore unknown keys safely.
   process.stdout.write(
     `${JSON.stringify({
       hookSpecificOutput: {

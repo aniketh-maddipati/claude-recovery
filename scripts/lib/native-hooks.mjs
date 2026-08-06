@@ -1,6 +1,9 @@
 /**
- * Install claude-recovery hooks into native Claude Code settings (~/.claude/settings.json).
- * Native hooks reliably surface SessionStart additionalContext; plugin hooks may not (#16538).
+ * Optional compatibility fallback: install claude-recovery hooks into native
+ * Claude Code settings (~/.claude/settings.json).
+ *
+ * Primary SessionStart handoff is the plugin-scoped hook (hooks/hooks.json).
+ * Use native install only when plugin additionalContext is unavailable (#16538).
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -57,7 +60,9 @@ export function mergeRecoveryHooks(settings, pluginRoot) {
   next.claudeRecovery = {
     pluginRoot,
     nativeHooksInstalledAt: new Date().toISOString(),
-    note: 'Native hooks installed for reliable SessionStart contract injection (see LIMITATIONS.md).',
+    note:
+      'Optional compatibility fallback for SessionStart contract injection. ' +
+      'Plugin-scoped hooks remain the primary path (see LIMITATIONS.md).',
   };
   return next;
 }

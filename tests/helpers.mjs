@@ -7,11 +7,15 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
 const RECOVERY_SCRIPT = join(ROOT, 'scripts', 'recovery.mjs');
 
-export function runRecovery(args, cwd) {
-  const result = spawnSync('node', [RECOVERY_SCRIPT, ...args], {
+export function runRecoveryRaw(args, cwd) {
+  return spawnSync('node', [RECOVERY_SCRIPT, ...args], {
     cwd,
     encoding: 'utf8',
   });
+}
+
+export function runRecovery(args, cwd) {
+  const result = runRecoveryRaw(args, cwd);
 
   const stdout = result.stdout?.trim() ?? '';
   const stderr = result.stderr?.trim() ?? '';
@@ -28,6 +32,24 @@ export function runRecovery(args, cwd) {
   }
 
   return JSON.parse(stdout);
+}
+
+export function runRecoveryExpectFail(args, cwd) {
+  const result = runRecoveryRaw(args, cwd);
+  const stdout = result.stdout?.trim() ?? '';
+  const stderr = result.stderr?.trim() ?? '';
+  let error = stderr || stdout;
+  try {
+    error = JSON.parse(stderr || stdout).error ?? error;
+  } catch {
+    // keep raw
+  }
+  return {
+    status: result.status ?? 1,
+    error,
+    stdout,
+    stderr,
+  };
 }
 
 export function createSessionHookOutput(scriptPath, payload) {

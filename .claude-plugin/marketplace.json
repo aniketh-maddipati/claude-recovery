@@ -1,0 +1,29 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-marketplace.json",
+  "name": "claude-recovery",
+  "description": "Developer-invoked selective salvage for mixed Claude Code attempts.",
+  "owner": {
+    "name": "Aniketh",
+    "email": "anikethsubs@gmail.com",
+    "url": "https://github.com/aniketh-maddipati"
+  },
+  "metadata": {
+    "pluginRoot": "./"
+  },
+  "plugins": [
+    {
+      "name": "claude-recovery",
+      "source": "./",
+      "description": "Developer-invoked recovery for untrustworthy Claude Code attempts. Preserves chosen code, decisions, and evidence in a clean continuation worktree.",
+      "version": "0.1.2",
+      "author": {
+        "name": "Aniketh"
+      },
+      "homepage": "https://github.com/aniketh-maddipati/claude-recovery#readme",
+      "repository": "https://github.com/aniketh-maddipati/claude-recovery",
+      "license": "MIT",
+      "keywords": ["recovery", "worktree", "claude-code", "selective-salvage"],
+      "category": "productivity"
+    }
+  ]
+}
