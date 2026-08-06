@@ -159,11 +159,6 @@ function indentBlock(text, prefix = '  ') {
 }
 
 function printDemoInstructions(result) {
-  const evidence =
-    result.evidencePaste ||
-    `Run \`${result.demoCommands.runCompatTest || result.demoCommands.runSmokeTest}\` and show \`git diff --stat\`.\n\n` +
-      'Do not edit anything. Stop after reporting the observable failure and changed files.';
-
   console.log(`
 Demo ready: ${result.fixture}
 Teleprompter: demo/PROMPTS.md
@@ -184,31 +179,25 @@ Before recording:
   In Claude: /help → Custom commands → claude-recovery:recover
   Step 4: type /claude-recovery:recover
 
-── Paste / type into Claude (FIXTURE) ──
+── TYPE into Claude (FIXTURE) ──
 
-1) Evidence — paste first:
-${indentBlock(evidence)}
+3 Evidence:
+${indentBlock(result.evidencePaste)}
 
-2) Recover — TYPE (slash command):
+4 Recover:
 ${indentBlock(result.recoverPaste)}
 
-  WAIT until Claude asks what to keep/reject/change.
-
-3) Decision — paste ONLY after Claude asks the keep/reject question:
+5 Decision (after keep/reject question):
 ${indentBlock(result.decisionPaste)}
 
-4) Approve — paste ONLY after contract preview looks right:
+6 Approve (after contract preview):
 ${indentBlock(result.approvePaste)}
 
-── After receipt (WORKTREE) ──
+── Terminal (WORKTREE) ──
 
-5) In your terminal: demo-wt
-   (after: source demo/demo-env.sh — expect only tests/auth-compat.test.mjs)
-
-6) demo-fresh   (fresh Claude in WORKTREE)
-
-7) Paste into new Claude session:
-${indentBlock(result.freshSessionPaste)}
+7 demo-wt
+8 demo-fresh
+9 TYPE: ${result.freshSessionPaste.trim()}
 
 Full teleprompter (SAY lines + timing): demo/PROMPTS.md
 `);

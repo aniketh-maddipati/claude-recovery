@@ -34,7 +34,7 @@ All notable changes to **claude-recovery** are documented here.
 - `demo/PROMPTS.md` — teleprompter with word-for-word SAY lines, paste/type cues, and straight-read block
 - `demo/record.sh` / `npm run demo:record` — preflight + fixture + open PROMPTS.md
 - `npm run demo:reset` — remove stale `.demo/` rehearsal artifacts
-- Plugin zip builds to `~/Downloads/claude-recovery.zip`; demo uses slash `/claude-recovery:recover`
+- Demo prompts shortened to one-line TYPE cues + cheat sheet at top of PROMPTS.md
 - Added `commands/recover.md` fallback so `/claude-recovery:recover` registers when `skills/` discovery fails under `--plugin-dir`
 - Demo recover step uses paste fallback with explicit `recovery.mjs` paths when slash command is unavailable
 

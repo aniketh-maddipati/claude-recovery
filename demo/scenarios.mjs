@@ -20,20 +20,11 @@ export const DEMO_SCENARIOS = {
     approach: 'use an adapter',
     fixtureDir: 'auth-service',
     testCommand: 'node --test tests/auth-compat.test.mjs',
-    evidencePaste:
-      'Run `node --test tests/auth-compat.test.mjs` and show `git diff --stat`.\n' +
-      '\n' +
-      'Do not edit anything. Stop after reporting the observable failure and changed files.',
+    evidencePaste: 'Run compat test and git diff --stat. No edits.',
     decisionPaste:
-      'Keep the compatibility test and expired-token finding.\n' +
-      '\n' +
-      'Reject the AuthProvider interface change and ApiClient migration.\n' +
-      '\n' +
-      'Restart from the clean base, use an adapter, and require the compatibility test before completion.',
-    freshSessionPaste:
-      'Before editing, summarize the implementation boundary and required verification.',
-    approvePaste:
-      'Approved. Run approve and finalize as separate steps, then show the compact receipt.',
+      'Keep compat test and expired-token finding. Reject AuthProvider and ApiClient migration. Adapter next pass, require compat test.',
+    freshSessionPaste: 'Summarize boundary and verification before editing.',
+    approvePaste: 'Approved. Approve and finalize separately, show receipt.',
     recoverPaste: '/claude-recovery:recover',
     demoCommands: {
       originalOutcome: 'cat .claude/recovery/original-outcome.json',
@@ -82,16 +73,10 @@ This nudge is explicit demo setup — not something to imply happened without in
     approach: 'wrap getConfig with a flag helper',
     fixtureDir: 'config-toggle',
     testCommand: 'node --test tests/config-smoke.test.mjs',
-    evidencePaste:
-      'Run `node --test tests/config-smoke.test.mjs` and show `git diff --stat`.\n' +
-      '\n' +
-      'Do not edit anything. Stop after reporting the observable failure and changed files.',
-    decisionPaste:
-      'Keep the smoke test and default-false finding. Reject the getConfig rename. Fresh session from clean base.',
-    freshSessionPaste:
-      'Before editing, summarize the implementation boundary and required verification.',
-    approvePaste:
-      'Approved. Run approve and finalize as separate steps, then show the compact receipt.',
+    evidencePaste: 'Run smoke test and git diff --stat. No edits.',
+    decisionPaste: 'Keep smoke test and finding. Reject getConfig rename. Fresh pass from clean base.',
+    freshSessionPaste: 'Summarize boundary and verification before editing.',
+    approvePaste: 'Approved. Approve and finalize separately, show receipt.',
     recoverPaste: '/claude-recovery:recover',
     demoCommands: {
       originalOutcome: 'cat .claude/recovery/original-outcome.json',

@@ -125,38 +125,33 @@ test('PROMPTS.md is the teleprompter with say, paste, and see cues', () => {
   const recording = readFileSync(join(ROOT, 'demo/RECORDING.md'), 'utf8');
   const script = readFileSync(join(ROOT, 'demo/SCRIPT.md'), 'utf8');
   assert.match(prompts, /Demo teleprompter/);
+  assert.match(prompts, /Type this \(cheat sheet\)/);
   assert.match(prompts, /Teleprompter-only/);
   assert.match(prompts, /\*\*SAY:\*\*/);
-  assert.match(prompts, /I built claude-recovery for when a Claude Code attempt is mixed/);
-  assert.match(prompts, /AuthProvider is just a login checker/);
-  assert.match(prompts, /FIXTURE/);
-  assert.match(prompts, /WORKTREE/);
+  assert.match(prompts, /Run compat test and git diff --stat/);
   assert.match(prompts, /demo-go/);
   assert.match(prompts, /demo-wt/);
   assert.match(prompts, /demo-fresh/);
   assert.match(prompts, /\/claude-recovery:recover/);
-  assert.match(prompts, /TYPE into Claude/);
-  assert.match(prompts, /Reject the AuthProvider interface change and ApiClient migration/);
-  assert.match(prompts, /Run approve and finalize as separate steps/i);
-  assert.match(prompts, /Before editing, summarize the implementation boundary/);
-  assert.match(prompts, /demo-wt/);
-  assert.match(prompts, /Same boundary, clean tree, useful test kept/);
+  assert.match(prompts, /Reject AuthProvider and ApiClient migration/);
+  assert.match(prompts, /Approve and finalize separately/i);
+  assert.match(prompts, /Summarize boundary and verification before editing/);
   assert.match(recording, /demo\/PROMPTS\.md/);
   assert.match(script, /demo\/PROMPTS\.md/);
 });
 
-test('npm run demo prints paste/type sequence', () => {
+test('npm run demo prints short type prompts', () => {
   const result = spawnSync('npm', ['run', 'demo'], {
     cwd: ROOT,
     encoding: 'utf8',
   });
   assert.equal(result.status, 0, result.stderr);
   const out = `${result.stdout ?? ''}${result.stderr ?? ''}`;
-  assert.match(out, /claude-recovery\.zip|Downloads|plugin zip/i);
+  assert.match(out, /Run compat test and git diff --stat/);
   assert.match(out, /\/claude-recovery:recover/);
-  assert.match(out, /Reject the AuthProvider interface change and ApiClient migration/);
-  assert.match(out, /Run approve and finalize as separate steps/);
-  assert.match(out, /Before editing, summarize the implementation boundary/);
+  assert.match(out, /Reject AuthProvider and ApiClient migration/);
+  assert.match(out, /Approve and finalize separately/i);
+  assert.match(out, /Summarize boundary and verification before editing/);
   assert.match(out, /demo-wt/);
 });
 
