@@ -715,6 +715,10 @@ Before editing, summarize the implementation boundary and required verification.
 ## Cold-read card (print this)
 
 ```text
+DIRS:  REPO=~/claude-recovery (off camera)
+       FIXTURE=~/claude-recovery/.demo/auth-service (Steps 1-17)
+       WORKTREE=…/recovery-worktrees/<name> (Steps 19-25)
+
 SAY:  I built claude-recovery for a recovery case rewind doesn’t cover. Rewind rolls
       back everything after a checkpoint. Here the later work is mixed — I reject the
       implementation direction, but a test or finding is still useful. This skill lets
