@@ -18,6 +18,8 @@ npm run demo
 
 Start Loom. Open this file beside the terminal.
 
+**Before Step 0:** In Claude, run `/help` → **Custom commands**. You should see `claude-recovery:recover`. If not, relaunch with an absolute `--plugin-dir` path and avoid `--resume`. Step 4 includes a paste fallback that works without the slash command.
+
 ---
 
 ## Step 0 — Launch
@@ -91,10 +93,20 @@ Do not edit anything. Stop after reporting the observable failure and changed fi
 **SAY:**
 > I'm invoking recover. It captures Git state and command evidence, then asks me what to keep and reject.
 
-**PASTE into Claude:**
+**PASTE into Claude** (primary — works even if the slash command is missing):
 ```
-/claude-recovery:recover
+Read and follow ~/claude-recovery/skills/recover/SKILL.md.
+
+Run capture and inspect first:
+node ~/claude-recovery/scripts/recovery.mjs capture
+node ~/claude-recovery/scripts/recovery.mjs inspect
+
+Show the compact labeled current-attempt view, then ask: What should the next attempt keep, reject, or change?
+
+Stop before writing decision.json or running approve/finalize.
 ```
+
+**Or try slash:** `/claude-recovery:recover`
 
 **WAIT**
 
@@ -237,7 +249,17 @@ Do not edit anything. Stop after reporting the observable failure and changed fi
 [SAY] I'm invoking recover. It captures Git state and command evidence, then asks me what to keep and reject.
 
 [PASTE]
-/claude-recovery:recover
+Read and follow ~/claude-recovery/skills/recover/SKILL.md.
+
+Run capture and inspect first:
+node ~/claude-recovery/scripts/recovery.mjs capture
+node ~/claude-recovery/scripts/recovery.mjs inspect
+
+Show the compact labeled current-attempt view, then ask: What should the next attempt keep, reject, or change?
+
+Stop before writing decision.json or running approve/finalize.
+
+(or try slash: /claude-recovery:recover)
 
 [WAIT — SEE evidence + keep/reject question]
 

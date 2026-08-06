@@ -124,6 +124,7 @@ export function setupDemoFixture({ scenario: scenarioName = 'auth-service', rese
     evidencePaste: scenario.evidencePaste,
     decisionPaste: scenario.decisionPaste,
     approvePaste: scenario.approvePaste,
+    recoverPaste: scenario.recoverPaste,
     freshSessionPaste: scenario.freshSessionPaste,
     demoCommands: scenario.demoCommands,
     promptsFile: join(ROOT, 'demo', 'PROMPTS.md'),
@@ -153,18 +154,23 @@ function printDemoInstructions(result) {
 
   console.log(`
 Demo ready: ${result.fixture}
-Cold-read card: demo/PROMPTS.md
+Teleprompter: demo/PROMPTS.md
 
 Launch (FIXTURE):
 ${indentBlock(result.launchCommand)}
+
+Before recording: run /help → Custom commands. Look for claude-recovery:recover.
+If missing, use the recover paste below (Step 4) instead of the slash command.
 
 ── Paste into Claude (FIXTURE) ──
 
 1) Evidence:
 ${indentBlock(evidence)}
 
-2) Recover:
-${indentBlock('/claude-recovery:recover')}
+2) Recover (paste this — works even if /claude-recovery:recover is unknown):
+${indentBlock(result.recoverPaste)}
+
+  Or try slash: /claude-recovery:recover
 
 3) Decision:
 ${indentBlock(result.decisionPaste)}

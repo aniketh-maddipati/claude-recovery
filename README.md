@@ -274,8 +274,13 @@ Component directories live at the **plugin root**, not inside `.claude-plugin/`.
 
 ```bash
 claude --plugin-dir /path/to/claude-recovery
-/help   # look for claude-recovery:recover
+/help   # Custom commands → look for claude-recovery:recover
+/reload-plugins
+```
 
+If `/claude-recovery:recover` is unknown, paste the Step 4 recover prompt from [`demo/PROMPTS.md`](demo/PROMPTS.md) (reads `skills/recover/SKILL.md` with explicit script paths). The plugin also ships `commands/recover.md` as a fallback registration path.
+
+```bash
 node /path/to/claude-recovery/scripts/run-manual-test.mjs
 node /path/to/claude-recovery/scripts/recovery.mjs capture
 node /path/to/claude-recovery/scripts/recovery.mjs inspect | jq .

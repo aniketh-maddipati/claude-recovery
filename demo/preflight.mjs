@@ -69,6 +69,12 @@ function main() {
     return path;
   }));
 
+  rows.push(check('recover command exists', () => {
+    const path = join(ROOT, 'commands', 'recover.md');
+    if (!existsSync(path)) throw new Error('missing commands/recover.md');
+    return path;
+  }));
+
   rows.push(check('hook configuration parses', () => {
     const path = join(ROOT, 'hooks', 'hooks.json');
     if (!existsSync(path)) throw new Error('missing hooks/hooks.json');
@@ -140,6 +146,8 @@ function main() {
     console.log('All checks passed.');
     console.log(`Next: npm run demo`);
     console.log(`Then: cd ${demoFixturePath('auth-service')} && claude --plugin-dir ${ROOT}`);
+    console.log('In Claude: /help → Custom commands → look for claude-recovery:recover');
+    console.log('If the slash command is missing, use the Step 4 recover paste in demo/PROMPTS.md');
     console.log('Follow: demo/RECORDING.md');
     process.exit(0);
   }

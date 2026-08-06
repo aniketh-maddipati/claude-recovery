@@ -91,6 +91,13 @@ test('setupDemoFixture strips stale commands.jsonl from a previous rehearsal', (
   assert.doesNotThrow(() => assertHonestDemoFixture(result.fixture));
 });
 
+test('recover is available as skill and command', () => {
+  const skill = readFileSync(join(ROOT, 'skills', 'recover', 'SKILL.md'), 'utf8');
+  const command = readFileSync(join(ROOT, 'commands', 'recover.md'), 'utf8');
+  assert.match(skill, /recovery\.mjs capture/);
+  assert.match(command, /skills\/recover\/SKILL\.md/);
+});
+
 test('PROMPTS.md is the teleprompter with say, paste, and see cues', () => {
   const prompts = readFileSync(join(ROOT, 'demo/PROMPTS.md'), 'utf8');
   const recording = readFileSync(join(ROOT, 'demo/RECORDING.md'), 'utf8');
@@ -102,6 +109,8 @@ test('PROMPTS.md is the teleprompter with say, paste, and see cues', () => {
   assert.match(prompts, /AuthProvider is just a login checker/);
   assert.match(prompts, /FIXTURE/);
   assert.match(prompts, /WORKTREE/);
+  assert.match(prompts, /skills\/recover\/SKILL\.md/);
+  assert.match(prompts, /recovery\.mjs capture/);
   assert.match(prompts, /\/claude-recovery:recover/);
   assert.match(prompts, /Reject the AuthProvider interface change and ApiClient migration/);
   assert.match(prompts, /Run approve and finalize as separate steps/i);
@@ -120,6 +129,8 @@ test('npm run demo prints paste/type sequence', () => {
   assert.equal(result.status, 0, result.stderr);
   const out = `${result.stdout ?? ''}${result.stderr ?? ''}`;
   assert.match(out, /Teleprompter: demo\/PROMPTS\.md|Full teleprompter: demo\/PROMPTS\.md/);
+  assert.match(out, /skills\/recover\/SKILL\.md/);
+  assert.match(out, /recovery\.mjs capture/);
   assert.match(out, /\/claude-recovery:recover/);
   assert.match(out, /Reject the AuthProvider interface change and ApiClient migration/);
   assert.match(out, /Run approve and finalize as separate steps/);

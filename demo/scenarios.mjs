@@ -34,6 +34,16 @@ export const DEMO_SCENARIOS = {
       'Before editing, summarize the implementation boundary and required verification.',
     approvePaste:
       'Approved. Run approve and finalize as separate steps, then show the compact receipt.',
+    recoverPaste:
+      'Read and follow ~/claude-recovery/skills/recover/SKILL.md.\n' +
+      '\n' +
+      'Run capture and inspect first:\n' +
+      'node ~/claude-recovery/scripts/recovery.mjs capture\n' +
+      'node ~/claude-recovery/scripts/recovery.mjs inspect\n' +
+      '\n' +
+      'Show the compact labeled current-attempt view, then ask: What should the next attempt keep, reject, or change?\n' +
+      '\n' +
+      'Stop before writing decision.json or running approve/finalize.',
     demoCommands: {
       originalOutcome: 'cat .claude/recovery/original-outcome.json',
       diffStat: 'git diff --stat HEAD',
@@ -91,6 +101,16 @@ This nudge is explicit demo setup — not something to imply happened without in
       'Before editing, summarize the implementation boundary and required verification.',
     approvePaste:
       'Approved. Run approve and finalize as separate steps, then show the compact receipt.',
+    recoverPaste:
+      'Read and follow ~/claude-recovery/skills/recover/SKILL.md.\n' +
+      '\n' +
+      'Run capture and inspect first:\n' +
+      'node ~/claude-recovery/scripts/recovery.mjs capture\n' +
+      'node ~/claude-recovery/scripts/recovery.mjs inspect\n' +
+      '\n' +
+      'Show the compact labeled current-attempt view, then ask: What should the next attempt keep, reject, or change?\n' +
+      '\n' +
+      'Stop before writing decision.json or running approve/finalize.',
     demoCommands: {
       originalOutcome: 'cat .claude/recovery/original-outcome.json',
       diffStat: 'git diff --stat HEAD',
