@@ -17,6 +17,349 @@ Open this file beside Loom. Follow **top → bottom**. Say **only** the quoted l
 
 **Published cut target: 45–75 seconds** (spoken lines ~75s; trim waits to fit).
 
+**While recording, follow [Micro-steps](#micro-steps--exact-order-use-this-while-recording) below — one numbered action at a time.**
+
+---
+
+## Micro-steps — exact order (use this while recording)
+
+Legend: **SAY** = speak aloud · **PASTE** = paste into Claude · **TYPE** = type in terminal · **WAIT** = say nothing · **CODE?** = do you edit source files?
+
+### Off camera (before Loom)
+
+| Step | Action | CODE? |
+|------|--------|-------|
+| 0.1 | TYPE: `npm run demo:record` | No |
+| 0.2 | Read the printed launch command | No |
+| 0.3 | Open Loom, mic on, one terminal 16–18 pt | No |
+| 0.4 | Open this file (`demo/SCRIPT.md`) beside Loom | No |
+| 0.5 | **Start Loom recording** | No |
+| 0.6 | TYPE in terminal the launch command, e.g. `cd .demo/auth-service && claude --plugin-dir /path/to/claude-recovery` | No |
+| 0.7 | WAIT until Claude Code is ready in the fixture | No |
+
+---
+
+### On camera — step by step
+
+#### Step 1 — SAY (skill intro)
+
+**SAY exactly:**
+
+> I built claude-recovery for a recovery case rewind doesn't cover. Rewind rolls back everything after a checkpoint. Here the later work is mixed — I reject the implementation direction, but a test or finding is still useful. This skill lets me choose what survives, preview that as a Recovery Contract, and start a clean Git worktree with only the approved files.
+
+**CODE?** No · **PASTE?** No · **WAIT?** No
+
+---
+
+#### Step 2 — SAY (explain fake repo)
+
+**SAY exactly:**
+
+> Quick context — this is a fake mini app, not a real product. AuthProvider is just a login checker: you pass a token string, it says valid or not. The function is called authenticate. ApiClient is the code that calls it. Claude renamed authenticate to verifyRequest and rewrote the client to match. That's the rejected migration. It also added a test that says authenticate must still exist — that test fails right now, and that's the useful part I want to keep.
+
+**CODE?** No · **PASTE?** No · **WAIT?** No
+
+---
+
+#### Step 3 — SAY (intro evidence)
+
+**SAY exactly:**
+
+> Let me show the evidence first — the failing test and what files changed.
+
+**CODE?** No · **PASTE?** Not yet
+
+---
+
+#### Step 4 — PASTE (evidence prompt)
+
+**PASTE into Claude exactly:**
+
+```
+Run `node --test tests/auth-compat.test.mjs` and show `git diff --stat`.
+
+Do not edit anything. Stop after reporting the observable failure and changed files.
+```
+
+**CODE?** No · **SAY?** No — press Enter and stop talking
+
+---
+
+#### Step 5 — WAIT (evidence output)
+
+**WAIT** until Claude finishes. Do not speak.
+
+**Screen must show:**
+
+- compat test failing
+- `git diff --stat` with `provider.mjs`, `api-client.mjs`, `auth-compat.test.mjs`
+
+**CODE?** No
+
+---
+
+#### Step 6 — SAY (point at evidence)
+
+**SAY exactly:**
+
+> So authenticate is gone, verifyRequest is in its place, the client was migrated, and the guardrail test is failing. I want to keep that test — not the rename.
+
+**CODE?** No · **PASTE?** No
+
+**Add Loom overlay:** `The implementation direction is rejected. The test is useful.`
+
+---
+
+#### Step 7 — SAY (intro recover)
+
+**SAY exactly:**
+
+> I'm invoking the recover skill. It captures Git state and command evidence, then asks me what to keep and reject.
+
+**CODE?** No
+
+---
+
+#### Step 8 — PASTE (recover skill)
+
+**PASTE into Claude exactly:**
+
+```
+/claude-recovery:recover
+```
+
+**CODE?** No · Press Enter · stop talking
+
+---
+
+#### Step 9 — WAIT (recover capture)
+
+**WAIT** until Claude shows observed evidence and asks what to keep/reject/change.
+
+**CODE?** No
+
+---
+
+#### Step 10 — SAY (intro decision)
+
+**SAY exactly:**
+
+> I'm keeping the guardrail test and the expired-token finding. I'm rejecting the rename on the login checker and the client migration. Next attempt starts clean, uses an adapter instead of renaming authenticate, and has to pass that test.
+
+**CODE?** No
+
+---
+
+#### Step 11 — PASTE (decision)
+
+**PASTE into Claude exactly:**
+
+```
+Keep the compatibility test and expired-token finding.
+
+Reject the AuthProvider interface change and ApiClient migration.
+
+Restart from the clean base, use an adapter, and require the compatibility test before completion.
+```
+
+**CODE?** No · Press Enter · stop talking
+
+**Add Loom overlay:** `Keep the evidence. Reject the migration.`
+
+---
+
+#### Step 12 — WAIT (contract preview)
+
+**WAIT** until Recovery Contract preview is readable (KEEP / DISCARD / NEXT).
+
+**CODE?** No
+
+---
+
+#### Step 13 — SAY (intro approve)
+
+**SAY exactly:**
+
+> Contract matches what I want — keep the test, discard the login checker and client changes, adapter on the next pass. I'm approving explicitly; approve and finalize run as separate steps.
+
+**CODE?** No
+
+---
+
+#### Step 14 — PASTE (approve)
+
+**PASTE into Claude exactly:**
+
+```
+Approved. Run approve and finalize as separate steps, then show the compact receipt.
+```
+
+**CODE?** No · Press Enter · stop talking
+
+---
+
+#### Step 15 — WAIT (receipt)
+
+**WAIT** until compact receipt appears:
+
+```text
+RECOVERY READY
+Kept
+tests/auth-compat.test.mjs
+Boundary verification
+PASS
+Launch manually
+cd '…' && claude --plugin-dir '…'
+```
+
+**CODE?** No — Claude runs approve + finalize, not you
+
+---
+
+#### Step 16 — SAY (optional, boundary)
+
+**SAY exactly:**
+
+> Boundary verification passed — rejected files match the clean base again.
+
+**CODE?** No · Skip if receipt is still loading
+
+---
+
+#### Step 17 — COPY (launch line)
+
+**COPY** the `cd '…' && claude --plugin-dir '…'` line from the receipt. Do not paste yet.
+
+**CODE?** No
+
+**If no receipt appeared, PASTE this once into Claude (fallback, still no coding):**
+
+```
+node /path/to/claude-recovery/scripts/recovery.mjs receipt --manifest .claude/recovery/recovery-manifest.json
+```
+
+Then WAIT and COPY the launch line.
+
+---
+
+#### Step 18 — SAY (intro worktree check)
+
+**SAY exactly:**
+
+> In the recovery worktree, only the test file should differ. Login checker and client should be back to authenticate — not verifyRequest.
+
+**CODE?** No
+
+---
+
+#### Step 19 — TYPE (go to worktree + diff)
+
+**TYPE in terminal** (use path from receipt):
+
+```bash
+cd '/path/from/receipt'
+git diff --name-only
+```
+
+**CODE?** No — two shell commands, no file edits
+
+**Screen must show only:**
+
+```text
+tests/auth-compat.test.mjs
+```
+
+---
+
+#### Step 20 — SAY (worktree result)
+
+**SAY exactly:**
+
+> One file. That's the selective salvage.
+
+**Add Loom overlay:** `Clean base. Only the approved test carries forward.`
+
+**CODE?** No
+
+---
+
+#### Step 21 — SAY (intro fresh session)
+
+**SAY exactly:**
+
+> Last step — a fresh Claude session in that worktree. SessionStart should inject the approved contract. I'm not asking it to implement yet; I just want it to restate the boundary so viewers can see the handoff worked.
+
+**CODE?** No
+
+---
+
+#### Step 22 — TYPE (launch fresh Claude)
+
+**TYPE/PASTE in terminal** the launch line you copied in Step 17:
+
+```bash
+cd '/path/from/receipt' && claude --plugin-dir '/path/to/claude-recovery'
+```
+
+**Important:** interactive launch, **no** `-p` flag.
+
+**CODE?** No · **WAIT** until new Claude session is ready
+
+---
+
+#### Step 23 — PASTE (fresh session proof)
+
+**PASTE into the NEW Claude session exactly:**
+
+```
+Before editing, summarize the implementation boundary and required verification.
+```
+
+**CODE?** No · Press Enter · stop talking
+
+---
+
+#### Step 24 — WAIT (boundary summary)
+
+**WAIT** until Claude summarizes. It should mention:
+
+- keep `authenticate(token)` — not `verifyRequest`
+- no ApiClient rewrite
+- use an adapter
+- run `node --test tests/auth-compat.test.mjs`
+
+**CODE?** No · **Do not** ask it to implement anything
+
+---
+
+#### Step 25 — SAY (close)
+
+**SAY exactly:**
+
+> Same boundary, clean tree, useful test kept. That's the handoff — stopping before the second implementation.
+
+**CODE?** No
+
+---
+
+#### Step 26 — STOP
+
+**Stop Loom recording.**
+
+**Do not:** write code, fix auth, implement adapter, or start a second attempt.
+
+---
+
+### Quick tally
+
+| You do on camera | How many times |
+|------------------|----------------|
+| **SAY** (spoken lines) | 12 lines |
+| **PASTE** into Claude | 5 pastes |
+| **TYPE** in terminal | 2 moments (worktree `cd` + diff; fresh launch) |
+| **WAIT** (silent) | 5 waits |
+| **Write/edit code** | **0** |
+
 ---
 
 ## READ THIS FIRST — what is AuthProvider? (plain English)

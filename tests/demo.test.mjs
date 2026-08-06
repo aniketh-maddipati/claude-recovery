@@ -103,7 +103,12 @@ test('PROMPTS.md and RECORDING.md match the implemented flow', () => {
   assert.match(script, /YOU SAY/);
   assert.match(script, /YOU PASTE/);
   assert.match(script, /VIEWERS SHOULD SEE/);
-  assert.match(script, /READ THIS FIRST/);
+  assert.match(script, /Micro-steps/);
+  assert.match(script, /Step 1 — SAY/);
+  assert.match(script, /Step 4 — PASTE/);
+  assert.match(script, /Step 19 — TYPE/);
+  assert.match(script, /Step 23 — PASTE/);
+  assert.match(script, /Write\/edit code.*0/);
   assert.match(script, /login checker/);
   assert.match(script, /fake mini app/);
   assert.match(script, /I built claude-recovery for a recovery case rewind/);
