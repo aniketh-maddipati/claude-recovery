@@ -87,6 +87,7 @@ test('live demo fixture starts clean without bad attempt', () => {
 test('PROMPTS.md and RECORDING.md match the implemented flow', () => {
   const prompts = readFileSync(join(ROOT, 'demo/PROMPTS.md'), 'utf8');
   const recording = readFileSync(join(ROOT, 'demo/RECORDING.md'), 'utf8');
+  const script = readFileSync(join(ROOT, 'demo/SCRIPT.md'), 'utf8');
   for (const name of listDemoScenarios()) {
     assert.match(prompts, new RegExp(name));
   }
@@ -99,6 +100,12 @@ test('PROMPTS.md and RECORDING.md match the implemented flow', () => {
   assert.match(prompts, /Do not pre-seed|commands\.jsonl.*absent|start absent/i);
   assert.match(recording, /waits trimmed/i);
   assert.match(recording, /The implementation direction is rejected\. The test is useful\./);
+  assert.match(script, /SAY/);
+  assert.match(script, /PASTE/);
+  assert.match(script, /\/claude-recovery:recover/);
+  assert.match(script, /Reject the AuthProvider interface change and ApiClient migration/);
+  assert.match(script, /Before editing, summarize the implementation boundary/);
+  assert.match(script, /Cold-read card/);
   assert.doesNotMatch(recording, /tail -n 2 \.claude\/recovery\/commands\.jsonl/);
   assert.doesNotMatch(prompts, /seedCommandsEvidence|hardcoded fake timestamps/i);
 });

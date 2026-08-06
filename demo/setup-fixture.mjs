@@ -154,6 +154,7 @@ ${indentBlock(result.freshSessionPaste)}
 Expected fresh-session themes: preserve AuthProvider.authenticate(token);
 no ApiClient migration; use an adapter; run the compatibility test.
 
+Speaking script (say this / paste that): demo/SCRIPT.md
 Recording cut (~68s): demo/RECORDING.md
 Copy-paste prompts: demo/PROMPTS.md
 Preflight (not for the final cut): npm run demo:preflight`);

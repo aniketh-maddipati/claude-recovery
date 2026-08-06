@@ -39,7 +39,7 @@ Failing compat test + git diff
 → clean worktree + fresh session with boundary
 ```
 
-Recording cut: [`demo/RECORDING.md`](demo/RECORDING.md)
+Recording cut: [`demo/RECORDING.md`](demo/RECORDING.md) · Speaking script: [`demo/SCRIPT.md`](demo/SCRIPT.md)
 
 ## Try the fixture
 

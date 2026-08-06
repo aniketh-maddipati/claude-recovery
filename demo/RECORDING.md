@@ -18,7 +18,8 @@ recovery manifest: absent
 approved pending contract: absent
 ```
 
-**Prompts:** [`demo/PROMPTS.md`](PROMPTS.md) · `npm run demo` prints the full paste sequence.
+**Speaking script + paste cards:** [`demo/SCRIPT.md`](SCRIPT.md)  
+**Prompts only:** [`demo/PROMPTS.md`](PROMPTS.md) · `npm run demo` prints the full paste sequence.
 
 ## Final cut sequence
 
