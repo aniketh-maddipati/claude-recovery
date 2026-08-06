@@ -7,6 +7,8 @@ cd "$ROOT"
 
 echo "==> Build plugin zip → ~/Downloads/claude-recovery.zip"
 npm run plugin:zip --silent
+echo "==> Build skill upload zip → ~/Downloads/claude-recovery.skill.zip"
+npm run skill:zip --silent
 PLUGIN_ZIP="${CLAUDE_RECOVERY_PLUGIN_ZIP:-$HOME/Downloads/claude-recovery.zip}"
 PLUGIN_DIR="${CLAUDE_RECOVERY_PLUGIN_DIR:-$PLUGIN_ZIP}"
 export CLAUDE_RECOVERY_PLUGIN_DIR="$PLUGIN_DIR"
@@ -52,6 +54,7 @@ cd "$FIXTURE" && claude --plugin-dir "\$CLAUDE_RECOVERY_PLUGIN_DIR"
 Then follow demo/PROMPTS.md (slash /claude-recovery:recover at step 4)
 
 Plugin zip: $PLUGIN_ZIP
+Skill upload: $HOME/Downloads/claude-recovery.skill.zip
 Teleprompter: $PROMPTS
 ================================================================
 EOF

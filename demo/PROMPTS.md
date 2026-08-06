@@ -34,10 +34,13 @@ cd "$(node ~/claude-recovery/demo/demo-cmd.mjs worktree)" && claude --plugin-dir
 
 ```bash
 cd ~/claude-recovery
-npm run plugin:zip
+npm run plugin:zip    # Claude Code: ~/Downloads/claude-recovery.zip
+npm run skill:zip     # Skill upload UI: ~/Downloads/claude-recovery.skill.zip
 npm run demo:reset && npm run demo:preflight && npm run demo
 export CLAUDE_RECOVERY_PLUGIN_DIR=$HOME/Downloads/claude-recovery.zip
 ```
+
+**Two zips:** use `claude-recovery.zip` for `--plugin-dir`. Upload `claude-recovery.skill.zip` in the skill UI (has `recover/SKILL.md` at the correct level).
 
 ---
 

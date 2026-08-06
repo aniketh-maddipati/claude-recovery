@@ -10,6 +10,7 @@ import { listDemoScenarios } from '../demo/scenarios.mjs';
 import { ROOT, setupFixtureSandbox, cleanupScenario } from './harness/scenario-e2e.mjs';
 import { runRecovery } from './helpers.mjs';
 import { buildPluginZip } from '../scripts/build-plugin-zip.mjs';
+import { buildSkillZip, skillMarkdownForUpload } from '../scripts/build-skill-zip.mjs';
 
 for (const scenarioName of listDemoScenarios()) {
   test(`demo fixture ${scenarioName} is honest (diff + test, no seeded decision/commands)`, () => {
@@ -90,6 +91,18 @@ test('setupDemoFixture strips stale commands.jsonl from a previous rehearsal', (
   writeFileSync(join(result.fixture, '.claude/recovery/commands.jsonl'), '{"rehearsal":true}\n');
   stripDemoSessionArtifacts(result.fixture);
   assert.doesNotThrow(() => assertHonestDemoFixture(result.fixture));
+});
+
+test('skill upload zip has recover/SKILL.md at folder root', () => {
+  const result = buildSkillZip({ quiet: true });
+  assert.match(result.path, /Downloads/);
+  const listing = spawnSync('unzip', ['-l', result.path], { encoding: 'utf8' });
+  assert.equal(listing.status, 0, listing.stderr);
+  assert.match(listing.stdout, /recover\/SKILL\.md/);
+  assert.doesNotMatch(listing.stdout, /skills\/recover\/SKILL\.md/);
+  const md = skillMarkdownForUpload();
+  assert.match(md, /scripts\/recovery\.mjs capture/);
+  assert.doesNotMatch(md, /\$\{CLAUDE_PLUGIN_ROOT\}/);
 });
 
 test('plugin zip contains recover skill and lands in Downloads', () => {

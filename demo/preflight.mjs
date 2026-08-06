@@ -14,6 +14,7 @@ import { spawnSync } from 'node:child_process';
 import { ROOT } from '../tests/harness/scenario-e2e.mjs';
 import { setupDemoFixture, demoFixturePath, assertHonestDemoFixture } from './setup-fixture.mjs';
 import { buildPluginZip } from '../scripts/build-plugin-zip.mjs';
+import { buildSkillZip } from '../scripts/build-skill-zip.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -74,6 +75,20 @@ function main() {
     const path = join(ROOT, 'commands', 'recover.md');
     if (!existsSync(path)) throw new Error('missing commands/recover.md');
     return path;
+  }));
+
+  rows.push(check('skill upload zip builds to Downloads', () => {
+    const result = buildSkillZip({ quiet: true });
+    if (!existsSync(result.path)) throw new Error('skill zip missing after build');
+    const listing = spawnSync('unzip', ['-l', result.path], { encoding: 'utf8' });
+    if (listing.status !== 0) throw new Error(listing.stderr || 'unzip failed');
+    if (!listing.stdout.includes('recover/SKILL.md')) {
+      throw new Error('skill zip must contain recover/SKILL.md at skill folder root');
+    }
+    if (listing.stdout.includes('skills/recover/SKILL.md')) {
+      throw new Error('skill zip must not nest SKILL.md under skills/recover/');
+    }
+    return `${result.path} (${result.bytes} bytes)`;
   }));
 
   rows.push(check('plugin zip builds to Downloads', () => {
