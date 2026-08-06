@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # One-command recording setup for the auth-service HN cut.
-# Use Loom (not asciinema). Follow demo/SCRIPT.md word for word.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -8,7 +7,7 @@ cd "$ROOT"
 
 PLUGIN_DIR="${CLAUDE_RECOVERY_PLUGIN_DIR:-$ROOT}"
 FIXTURE="$ROOT/.demo/auth-service"
-SCRIPT_MD="$ROOT/demo/SCRIPT.md"
+PROMPTS="$ROOT/demo/PROMPTS.md"
 LAUNCH_CLAUDE=0
 
 for arg in "$@"; do
@@ -18,12 +17,11 @@ for arg in "$@"; do
       cat <<'EOF'
 Usage: ./demo/record.sh [--launch]
 
-  1. Runs npm run demo:preflight
-  2. Builds the auth-service fixture (npm run demo)
-  3. Prints Loom steps + the exact Claude launch command
-  4. With --launch, starts Claude in the fixture (you still start Loom)
+  1. npm run demo:preflight
+  2. Builds fixture + prints paste/type sequence
+  3. Open demo/PROMPTS.md for the cold-read card
 
-Record with Loom, not asciinema. Open demo/SCRIPT.md as the teleprompter.
+Record with Loom. Open demo/PROMPTS.md beside the terminal.
 EOF
       exit 0
       ;;
@@ -34,7 +32,7 @@ echo "==> Preflight"
 npm run demo:preflight
 
 echo ""
-echo "==> Build auth-service fixture + print paste sequence"
+echo "==> Build fixture"
 npm run demo
 
 LAUNCH="cd '$FIXTURE' && claude --plugin-dir '$PLUGIN_DIR'"
@@ -42,38 +40,18 @@ LAUNCH="cd '$FIXTURE' && claude --plugin-dir '$PLUGIN_DIR'"
 cat <<EOF
 
 ================================================================
-RECORD WITH LOOM (not asciinema)
+RECORD WITH LOOM — use demo/PROMPTS.md
 ================================================================
 
-Why Loom: you need mic + screen + three short overlays, and Claude Code
-is an interactive TUI. asciinema is terminal-only (no voice/overlays) and
-is a poor fit for this cut.
-
-Checklist before you hit Record:
-  [ ] One terminal window, font 16–18 pt
-  [ ] Teleprompter open: $SCRIPT_MD
-  [ ] Loom ready (mic on, crop to that terminal)
-  [ ] Claude authenticated
-
-1) Start Loom recording (crop to the single terminal).
-2) In that terminal, launch Claude:
+1) Start Loom (single terminal, 16–18 pt)
+2) Launch FIXTURE:
 
   $LAUNCH
 
-3) Follow demo/SCRIPT.md top to bottom — say only the quoted lines,
-   paste only the marked blocks, use VIEWERS SHOULD SEE to know when to pause.
-4) After "That's the handoff. Stopping here." — stop Loom.
-5) Trim model waits; add a small "waits trimmed" note.
-6) Overlays (only these three), in order:
-     The implementation direction is rejected. The test is useful.
-     Keep the evidence. Reject the migration.
-     Clean base. Only the approved test carries forward.
+3) Follow demo/PROMPTS.md — paste/type in order
+4) Stop after fresh session summarizes the boundary
 
-Do NOT record: install, preflight, or this setup script.
-
-Teleprompter:  $SCRIPT_MD
-Prompts only:  $ROOT/demo/PROMPTS.md
-Shot list:     $ROOT/demo/RECORDING.md
+Card: $PROMPTS
 ================================================================
 EOF
 
@@ -83,8 +61,7 @@ if [[ "$LAUNCH_CLAUDE" -eq 1 ]]; then
     exit 1
   fi
   echo ""
-  echo "==> Starting Claude in the fixture (start Loom first if you have not)"
-  echo "    $LAUNCH"
+  echo "==> Starting Claude in FIXTURE (start Loom first if you have not)"
   cd "$FIXTURE"
   exec claude --plugin-dir "$PLUGIN_DIR"
 fi

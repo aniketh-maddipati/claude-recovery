@@ -39,7 +39,7 @@ Failing compat test + git diff
 → clean worktree + fresh session with boundary
 ```
 
-Record with **Loom** (not asciinema). Cut (45–75s): [`demo/RECORDING.md`](demo/RECORDING.md) · Teleprompter + viewer cues: [`demo/SCRIPT.md`](demo/SCRIPT.md)
+Record with **Loom**. Card + prompts: [`demo/PROMPTS.md`](demo/PROMPTS.md) · Cut notes: [`demo/RECORDING.md`](demo/RECORDING.md)
 
 ## Try the fixture
 
@@ -203,8 +203,8 @@ npm run setup-hooks:check
 | Script | Purpose |
 |--------|---------|
 | `npm test` | Unit, demo, mechanical e2e, prompt-eval harness |
-| `npm run demo` | Build `.demo/auth-service` and print the full demo sequence |
-| `npm run demo:record` | One-script Loom recording setup (`demo/record.sh`) |
+| `npm run demo` | Build `.demo/auth-service` and print paste/type sequence |
+| `npm run demo:record` | Preflight + fixture + point at `demo/PROMPTS.md` |
 | `npm run demo:preflight` | Machine checks before recording |
 | `npm run demo:receipt` | Compact human-readable finalize receipt |
 | `npm run sandbox` | Reset `.sandbox/auth-service` for manual `/recover` |

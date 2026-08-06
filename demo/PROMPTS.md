@@ -1,25 +1,40 @@
-# Demo prompts (copy-paste)
+# Demo cold-read card
 
-Primary HN scenario: **auth-service**. Paste these blocks in order during a Loom recording.
+One file. Paste/type in order. No coding on camera.
 
-For word-for-word narration with scenario context and viewer cues (45–75s teleprompter), use [`demo/SCRIPT.md`](SCRIPT.md).
-
-**Setup:**
+## Setup (off camera)
 
 ```bash
+cd ~/claude-recovery
+npm run demo:reset          # if a rehearsal left commands.jsonl behind
 npm run demo:preflight
 npm run demo
 ```
 
-Then run the printed interactive `cd ... && claude --plugin-dir ...` command.
+## Directories
 
-`npm run demo` prints this full sequence. The fixture is a **deterministic mixed-attempt overlay**. It is not live proof of independent instruction violation. `decision.json` and `commands.jsonl` start absent.
+| Where | Path |
+|-------|------|
+| **FIXTURE** (Steps 1–4) | `~/claude-recovery/.demo/auth-service` |
+| **WORKTREE** (Steps 5–6) | `~/claude-recovery/.demo/auth-service/.claude/recovery-worktrees/<name-from-receipt>` |
+
+Check: `pwd`
 
 ---
 
-## Primary scenario — auth-service
+## Launch (start Loom, then run)
 
-### Evidence prompt
+```bash
+cd ~/claude-recovery/.demo/auth-service && claude --plugin-dir ~/claude-recovery
+```
+
+Stay in **FIXTURE** until Step 5.
+
+---
+
+## Paste into Claude — FIXTURE (in order)
+
+### 1 — Evidence
 
 ```
 Run `node --test tests/auth-compat.test.mjs` and show `git diff --stat`.
@@ -27,13 +42,13 @@ Run `node --test tests/auth-compat.test.mjs` and show `git diff --stat`.
 Do not edit anything. Stop after reporting the observable failure and changed files.
 ```
 
-### Recovery
+### 2 — Recover
 
 ```
 /claude-recovery:recover
 ```
 
-### Decision
+### 3 — Decision
 
 ```
 Keep the compatibility test and expired-token finding.
@@ -43,77 +58,91 @@ Reject the AuthProvider interface change and ApiClient migration.
 Restart from the clean base, use an adapter, and require the compatibility test before completion.
 ```
 
-### Approval
+### 4 — Approve
 
 ```
 Approved. Run approve and finalize as separate steps, then show the compact receipt.
 ```
 
-### Fresh-session proof
+Copy the `cd '…' && claude --plugin-dir '…'` line from the receipt.
+
+**Receipt fallback** (paste into Claude if needed):
+
+```
+node ~/claude-recovery/scripts/recovery.mjs receipt --manifest .claude/recovery/recovery-manifest.json
+```
+
+---
+
+## Type in terminal — WORKTREE
+
+```bash
+cd ~/claude-recovery/.demo/auth-service/.claude/recovery-worktrees/<name-from-receipt>
+git diff --name-only
+```
+
+Expect only:
+
+```text
+tests/auth-compat.test.mjs
+```
+
+---
+
+## Launch fresh Claude — WORKTREE
+
+Paste the launch line from the receipt (interactive, no `-p`):
+
+```bash
+cd '<worktree-from-receipt>' && claude --plugin-dir ~/claude-recovery
+```
+
+---
+
+## Paste into Claude — WORKTREE (fresh session)
 
 ```
 Before editing, summarize the implementation boundary and required verification.
 ```
 
-Expected themes in the reply:
+Expect: keep `authenticate(token)`, no ApiClient migration, adapter, run compat test.
 
-- preserve `AuthProvider.authenticate(token)`
-- no `ApiClient` migration
-- use an adapter
-- run `node --test tests/auth-compat.test.mjs`
+**Stop.** Do not implement.
 
-### After finalize (optional receipt / worktree check)
+---
 
-```bash
-node /path/to/claude-recovery/scripts/recovery.mjs receipt \
-  --manifest .claude/recovery/recovery-manifest.json
+## Optional say lines (cold read)
 
-# in the recovery worktree
-git diff --name-only
 ```
+Mixed attempt — reject the rename, keep the test. Recovering selectively, not rewinding.
 
-Interactive launch (you start this manually — no `-p`):
+Fake mini app: login checker was renamed authenticate → verifyRequest. Useful guardrail test fails. Keeping the test.
 
-```bash
-cd '<worktree>' && claude --plugin-dir '<plugin-root>'
+Failing test plus diff — that’s the evidence.
+
+Invoking recover.
+
+Keep the test and finding. Reject the migration. Adapter on the next pass.
+
+Contract looks right. Approving.
+
+Only the approved test should differ from the clean base.
+
+Fresh session — summarize the boundary, don’t implement yet.
+
+That’s the handoff. Stopping here.
 ```
 
 ---
 
-## Secondary — config-toggle and live simulation
+## Loom overlays (optional)
 
-Not part of the primary HN cut.
+```text
+The implementation direction is rejected. The test is useful.
 
-### config-toggle
+Keep the evidence. Reject the migration.
 
-```bash
-npm run demo:config
+Clean base. Only the approved test carries forward.
 ```
 
-Decision:
-
-```
-Keep the smoke test and default-false finding. Reject the getConfig rename. Fresh session from clean base.
-```
-
-Approval and fresh-session prompts match the primary scenario wording above (approve/finalize as separate steps; summarize boundary before editing).
-
-### Live simulation
-
-Use only when you want to create the rejected attempt on camera. Prefer the deterministic fixture for the primary cut.
-
-```bash
-npm run demo:live -- auth-service
-```
-
-Paste the initial task from the printed instructions. If you need the rejected overlay shape for rehearsal, the printed nudge is **explicit demo setup** — do not imply it happened without instruction. Then run the evidence prompt through Bash, invoke `/claude-recovery:recover`, and continue with the primary recovery prompts.
-
----
-
-## Recording guardrails
-
-- **You** start the fresh interactive session after finalize.
-- Plugin SessionStart is the primary handoff. Native `setup-hooks` is optional.
-- Never describe `-p` as interactive.
-- If SessionStart is unavailable, stop and report the blocker — do not fake injection.
-- Do not pre-seed or describe fake `commands.jsonl` as hook-captured evidence.
+Recording notes: [`demo/RECORDING.md`](RECORDING.md)

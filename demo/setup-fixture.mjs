@@ -152,76 +152,40 @@ function printDemoInstructions(result) {
       'Do not edit anything. Stop after reporting the observable failure and changed files.';
 
   console.log(`
-Demo fixture ready (${result.scenario}): ${result.fixture}
-${result.loomTitle} — ${result.oneLiner}
+Demo ready: ${result.fixture}
+Cold-read card: demo/PROMPTS.md
 
-Deterministic mixed-attempt fixture (not live Claude misbehavior).
-Starting state: Git diff present, useful test present, commands.jsonl absent,
-decision.json absent, no recovery manifest / approved pending contract.
-
-Scenario (plain English — read demo/SCRIPT.md "READ THIS FIRST"):
-  Fake mini app, not a real product.
-  AuthProvider = login checker (authenticate(token)). ApiClient = code that calls it.
-  Rejected: Claude renamed authenticate → verifyRequest and migrated the client.
-  Keep: guardrail test (auth-compat.test.mjs) + expired-token finding.
-  Recovery: keep test, undo rename on provider + client, hand off Recovery Contract.
-
-Full word-for-word script + viewer cues: demo/SCRIPT.md
-
-Directories (see demo/SCRIPT.md):
-  REPO     = claude-recovery repo root (off camera only)
-  FIXTURE  = .demo/auth-service (Steps 1-17, first Claude session)
-  WORKTREE = .demo/auth-service/.claude/recovery-worktrees/<name> (Steps 19-25)
-
-────────────────────────────────────────────────────────────────
-Complete interactive sequence (paste in order)
-────────────────────────────────────────────────────────────────
-
-1) Launch Claude Code in the fixture (single terminal, 16–18 pt font):
-
+Launch (FIXTURE):
 ${indentBlock(result.launchCommand)}
 
-2) Evidence prompt:
+── Paste into Claude (FIXTURE) ──
 
+1) Evidence:
 ${indentBlock(evidence)}
 
-3) Recovery:
-
+2) Recover:
 ${indentBlock('/claude-recovery:recover')}
 
-4) Decision:
-
+3) Decision:
 ${indentBlock(result.decisionPaste)}
 
-5) Approval:
-
+4) Approve:
 ${indentBlock(result.approvePaste)}
 
-6) After finalize — compact receipt (optional; Claude may already show it):
+── Type in terminal (WORKTREE, after receipt) ──
 
-${indentBlock(`node ${result.pluginDir}/scripts/recovery.mjs receipt \\
-  --manifest .claude/recovery/recovery-manifest.json`)}
+git diff --name-only
 
-7) In the recovery worktree, confirm only approved files changed:
+── Launch fresh Claude (WORKTREE) ──
 
-${indentBlock('git diff --name-only')}
+<cd + claude line from receipt>
 
-8) Fresh interactive session (you launch manually — no -p):
-
-${indentBlock('<recommendedLaunchCommand from receipt>')}
-
-9) Fresh-session proof:
+── Paste into Claude (WORKTREE) ──
 
 ${indentBlock(result.freshSessionPaste)}
 
-Expected fresh-session themes: preserve AuthProvider.authenticate(token);
-no ApiClient migration; use an adapter; run the compatibility test.
-
-Recording setup (one script): npm run demo:record   # or ./demo/record.sh
-Speaking script (word-for-word + viewer cues): demo/SCRIPT.md
-Recording cut (45–75s): demo/RECORDING.md
-Copy-paste prompts: demo/PROMPTS.md
-Use Loom, not asciinema. Preflight is off-camera.`);
+Full card + optional say lines: demo/PROMPTS.md
+`);
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

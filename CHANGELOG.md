@@ -24,15 +24,15 @@ All notable changes to **claude-recovery** are documented here.
 - Demo fixture is an honest deterministic mixed-attempt overlay (no seeded `decision.json` / fake `commands.jsonl`)
 - README tightened for public beta (accurate rewind/branch distinction; tech reference below product explanation)
 - Primary demo/recording materials reduced to one auth-service HN scenario; `npm run demo` prints the full paste sequence
-- Demo recording guide retargeted to a 45–75s final cut with word-for-word narration in `demo/SCRIPT.md`
+- Demo materials simplified to one cold-read card: `demo/PROMPTS.md` (paste prompts + terminal commands)
 - Version bumped to 0.1.2 across package and plugin manifests
 
 ### Added (beta polish)
 
 - `.github/ISSUE_TEMPLATE/beta-feedback.yml` — sanitized beta feedback questionnaire
 - `docs/SHOW_HN.md` — short Show HN draft
-- `demo/SCRIPT.md` — plain-English auth-service explainer (“READ THIS FIRST”), word-for-word teleprompter, viewer cues (45–75s cut)
-- `demo/record.sh` / `npm run demo:record` — one-script Loom recording setup (preflight → fixture → checklist; optional `--launch`)
+- `demo/PROMPTS.md` — cold-read card with paste prompts and terminal commands
+- `demo/record.sh` / `npm run demo:record` — preflight + fixture + open PROMPTS.md
 - `npm run demo:reset` — remove stale `.demo/` rehearsal artifacts
 - Demo fixture setup strips ephemeral session files (`commands.jsonl`, etc.) so preflight passes after rehearsals
 

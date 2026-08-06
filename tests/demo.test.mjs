@@ -91,77 +91,46 @@ test('setupDemoFixture strips stale commands.jsonl from a previous rehearsal', (
   assert.doesNotThrow(() => assertHonestDemoFixture(result.fixture));
 });
 
-test('PROMPTS.md and RECORDING.md match the implemented flow', () => {
+test('PROMPTS.md is the cold-read card with paste prompts and commands', () => {
   const prompts = readFileSync(join(ROOT, 'demo/PROMPTS.md'), 'utf8');
   const recording = readFileSync(join(ROOT, 'demo/RECORDING.md'), 'utf8');
   const script = readFileSync(join(ROOT, 'demo/SCRIPT.md'), 'utf8');
-  for (const name of listDemoScenarios()) {
-    assert.match(prompts, new RegExp(name));
-  }
-  assert.match(recording, /45–75s|45-75s/);
-  assert.match(recording, /What viewers should see/i);
-  assert.match(prompts, /Before editing, summarize the implementation boundary/);
-  assert.match(recording, /Before editing, summarize the implementation boundary/);
-  assert.match(prompts, /Run approve and finalize as separate steps/i);
+  assert.match(prompts, /Demo cold-read card/);
+  assert.match(prompts, /FIXTURE/);
+  assert.match(prompts, /WORKTREE/);
+  assert.match(prompts, /\/claude-recovery:recover/);
   assert.match(prompts, /Reject the AuthProvider interface change and ApiClient migration/);
-  assert.match(prompts, /Do not pre-seed|commands\.jsonl.*absent|start absent/i);
-  assert.match(recording, /waits trimmed/i);
-  assert.match(recording, /The implementation direction is rejected\. The test is useful\./);
-  assert.match(script, /YOU SAY/);
-  assert.match(script, /YOU PASTE/);
-  assert.match(script, /VIEWERS SHOULD SEE/);
-  assert.match(script, /Directory map/);
-  assert.match(script, /\*\*FIXTURE\*\*/);
-  assert.match(script, /\*\*WORKTREE\*\*/);
-  assert.match(script, /Steps 1–17/);
-  assert.match(script, /Step 1 — SAY/);
-  assert.match(script, /Step 4 — PASTE/);
-  assert.match(script, /Step 19 — TYPE/);
-  assert.match(script, /Step 23 — PASTE/);
-  assert.match(script, /Write\/edit code.*0/);
-  assert.match(script, /login checker/);
-  assert.match(script, /fake mini app/);
-  assert.match(script, /I built claude-recovery for a recovery case rewind/);
-  assert.match(script, /Quick context — this is a fake mini app/);
-  assert.match(script, /Same boundary, clean tree, useful test kept/);
-  assert.match(script, /Loom/);
-  assert.match(script, /asciinema/);
-  assert.match(script, /demo\/record\.sh|npm run demo:record/);
-  assert.doesNotMatch(recording, /tail -n 2 \.claude\/recovery\/commands\.jsonl/);
-  assert.doesNotMatch(prompts, /seedCommandsEvidence|hardcoded fake timestamps/i);
+  assert.match(prompts, /Run approve and finalize as separate steps/i);
+  assert.match(prompts, /Before editing, summarize the implementation boundary/);
+  assert.match(prompts, /git diff --name-only/);
+  assert.match(prompts, /Optional say lines/);
+  assert.match(recording, /demo\/PROMPTS\.md/);
+  assert.match(script, /demo\/PROMPTS\.md/);
 });
 
-test('npm run demo prints the complete primary sequence', () => {
+test('npm run demo prints paste/type sequence', () => {
   const result = spawnSync('npm', ['run', 'demo'], {
     cwd: ROOT,
     encoding: 'utf8',
   });
   assert.equal(result.status, 0, result.stderr);
   const out = `${result.stdout ?? ''}${result.stderr ?? ''}`;
-  assert.match(out, /Complete interactive sequence/);
+  assert.match(out, /Cold-read card: demo\/PROMPTS\.md/);
   assert.match(out, /\/claude-recovery:recover/);
   assert.match(out, /Reject the AuthProvider interface change and ApiClient migration/);
   assert.match(out, /Run approve and finalize as separate steps/);
   assert.match(out, /Before editing, summarize the implementation boundary/);
-  assert.match(out, /Do not edit anything\. Stop after reporting/);
-  assert.match(out, /demo:record|demo\/record\.sh/);
-  assert.match(out, /Scenario \(plain English/);
-  assert.match(out, /login checker/);
-  assert.match(out, /Fake mini app/i);
-  assert.match(out, /demo\/SCRIPT\.md/);
-  assert.match(out, /Loom/);
+  assert.match(out, /git diff --name-only/);
 });
 
-test('demo/record.sh --help documents Loom setup', () => {
+test('demo/record.sh --help points at PROMPTS.md', () => {
   const result = spawnSync('bash', [join(ROOT, 'demo/record.sh'), '--help'], {
     cwd: ROOT,
     encoding: 'utf8',
   });
   assert.equal(result.status, 0, result.stderr);
   const out = `${result.stdout ?? ''}${result.stderr ?? ''}`;
-  assert.match(out, /Loom/);
-  assert.match(out, /asciinema/);
-  assert.match(out, /demo\/SCRIPT\.md/);
+  assert.match(out, /demo\/PROMPTS\.md/);
 });
 
 test('preflight fails clearly when a required executable is missing', () => {
