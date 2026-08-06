@@ -92,7 +92,7 @@ test('PROMPTS.md and RECORDING.md match the implemented flow', () => {
     assert.match(prompts, new RegExp(name));
   }
   assert.match(recording, /0–8s|0-8s/);
-  assert.match(recording, /55–68s|55-68s/);
+  assert.match(recording, /46–60s|46-60s|30–60s|30-60s/);
   assert.match(prompts, /Before editing, summarize the implementation boundary/);
   assert.match(recording, /Before editing, summarize the implementation boundary/);
   assert.match(prompts, /Run approve and finalize as separate steps/i);
@@ -100,12 +100,17 @@ test('PROMPTS.md and RECORDING.md match the implemented flow', () => {
   assert.match(prompts, /Do not pre-seed|commands\.jsonl.*absent|start absent/i);
   assert.match(recording, /waits trimmed/i);
   assert.match(recording, /The implementation direction is rejected\. The test is useful\./);
-  assert.match(script, /SAY/);
-  assert.match(script, /PASTE/);
+  assert.match(script, /YOU SAY/);
+  assert.match(script, /YOU PASTE/);
   assert.match(script, /\/claude-recovery:recover/);
+  assert.match(script, /verifyRequest/);
+  assert.match(script, /ApiClient/);
+  assert.match(script, /tests\/auth-compat\.test\.mjs/);
   assert.match(script, /Reject the AuthProvider interface change and ApiClient migration/);
   assert.match(script, /Before editing, summarize the implementation boundary/);
   assert.match(script, /Cold-read card/);
+  assert.match(script, /This attempt rewrote AuthProvider to verifyRequest/);
+  assert.match(script, /That’s the handoff\. Stopping here\./);
   assert.doesNotMatch(recording, /tail -n 2 \.claude\/recovery\/commands\.jsonl/);
   assert.doesNotMatch(prompts, /seedCommandsEvidence|hardcoded fake timestamps/i);
 });

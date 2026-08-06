@@ -1,53 +1,39 @@
-# Demo script — say this / paste that
+# Demo script — word for word
 
-Use this while recording. Relaxed tone. Do not improvise the paste blocks.
+Fixture: `.demo/auth-service`  
+Files in play:
 
-**Before you hit record** (not in the final cut):
+| Path | What’s wrong / useful |
+|------|------------------------|
+| `src/auth/provider.mjs` | Rejected: `authenticate(token)` → `verifyRequest(request)` |
+| `src/clients/api-client.mjs` | Rejected: client migrated to `verifyRequest` |
+| `tests/auth-compat.test.mjs` | Keep: asserts `authenticate(token)` still exists |
+| expired-token finding | Keep: tokens prefixed with `expired` fail auth |
+
+**Off camera** (do not record):
 
 ```bash
 npm run demo:preflight
 npm run demo
+cd .demo/auth-service && claude --plugin-dir ../..
 ```
 
-Copy the printed launch command, open one terminal (16–18 pt), start Claude:
+Open this file beside Loom. One terminal. 16–18 pt. Trim model waits; add “waits trimmed”.
 
-```bash
-cd /path/to/claude-recovery/.demo/auth-service && claude --plugin-dir /path/to/claude-recovery
-```
-
-Have this file open side-by-side. Trim long model waits in edit; add a small “waits trimmed” note.
+**Target cut: 30–60 seconds of you talking + on-screen action.**  
+Say **only** the lines in quotes. Do not paraphrase. Stay silent while Claude works.
 
 ---
 
-## Beat sheet (~68s)
+## Teleprompter (30–60s)
 
-| Time | You say (approx.) | You paste / type |
-|------|-------------------|------------------|
-| 0–8s | Opening + problem | Evidence prompt |
-| 8–18s | “I’m going to recover…” | `/claude-recovery:recover` |
-| 18–27s | “Keep the test, reject the migration” | Decision block |
-| 27–39s | “Here’s the contract…” | *(watch preview — no paste)* |
-| 39–49s | “Approve that” | Approval line |
-| 49–55s | “Only the test came forward” | `git diff --name-only` |
-| 55–68s | “Fresh session got the boundary” | Fresh-session proof |
+### Beat 1 — evidence (on-screen ~0–8s)
 
-Overlays only (add in Loom):
+**YOU SAY:**
 
-1. `The implementation direction is rejected. The test is useful.`
-2. `Keep the evidence. Reject the migration.`
-3. `Clean base. Only the approved test carries forward.`
+> This attempt rewrote AuthProvider to verifyRequest and migrated ApiClient. I also got a useful compat test and an expired-token finding. I’m keeping the test. I’m rejecting the migration.
 
----
-
-## Line-by-line
-
-### 0–8s — show the mixed attempt
-
-**SAY** (calm, not salesy):
-
-> Okay — so Claude already tried something here. It changed the auth API and started migrating clients, but it also left a useful compatibility test. I’m not going to keep the migration. I do want the test.
-
-**PASTE** into Claude:
+**YOU PASTE:**
 
 ```
 Run `node --test tests/auth-compat.test.mjs` and show `git diff --stat`.
@@ -55,43 +41,35 @@ Run `node --test tests/auth-compat.test.mjs` and show `git diff --stat`.
 Do not edit anything. Stop after reporting the observable failure and changed files.
 ```
 
-**WAIT** until the failing test and diff stat are visible.
+**SILENT** until fail + diff show `provider.mjs` / `api-client.mjs` / the test.
 
-**OVERLAY 1:** `The implementation direction is rejected. The test is useful.`
-
-**SAY** (optional, short, while it finishes):
-
-> Yeah — test fails, and you can see the provider and client files changed.
+**OVERLAY:** `The implementation direction is rejected. The test is useful.`
 
 ---
 
-### 8–18s — start recovery
+### Beat 2 — recover (on-screen ~8–16s)
 
-**SAY:**
+**YOU SAY:**
 
-> So instead of rewinding everything away, I’m going to recover — keep what I trust, drop what I don’t.
+> Recover.
 
-**TYPE / PASTE:**
+**YOU PASTE:**
 
 ```
 /claude-recovery:recover
 ```
 
-**WAIT** for observed evidence + the keep/reject/change question.
-
-**SAY** (while evidence scrolls, soft):
-
-> It’s just showing me what it saw — the files, the failing test. Now it asks what to keep.
+**SILENT** until evidence + keep/reject question appear.
 
 ---
 
-### 18–27s — decide
+### Beat 3 — decide (on-screen ~16–24s)
 
-**SAY:**
+**YOU SAY:**
 
-> Keep the compatibility test and the expired-token finding. Reject the AuthProvider change and the ApiClient migration. Restart clean, use an adapter, and make that test required.
+> Keep the compat test and the expired-token finding. Reject the AuthProvider interface change and the ApiClient migration. Restart from the clean base, use an adapter, and require that test.
 
-**PASTE** exactly:
+**YOU PASTE:**
 
 ```
 Keep the compatibility test and expired-token finding.
@@ -101,157 +79,151 @@ Reject the AuthProvider interface change and ApiClient migration.
 Restart from the clean base, use an adapter, and require the compatibility test before completion.
 ```
 
-**OVERLAY 2:** `Keep the evidence. Reject the migration.`
+**OVERLAY:** `Keep the evidence. Reject the migration.`
+
+**SILENT** while the Recovery Contract preview appears.
 
 ---
 
-### 27–39s — contract preview
+### Beat 4 — contract + approve (on-screen ~24–38s)
 
-**SAY** (no paste — point at the screen):
+**YOU SAY** (point at KEEP / DISCARD / NEXT):
 
-> And this is the Recovery Contract. Keep the test. Discard the provider and client changes. Next attempt starts from the clean base with an adapter.
+> Contract looks right — keep tests/auth-compat.test.mjs, discard provider and api-client, next attempt uses an adapter.
 
-Pause on KEEP / DISCARD / NEXT if those labels are on screen. Prefer the readable contract over raw JSON.
-
-**If Claude asks whether to proceed, wait — do not approve until the next beat.**
-
----
-
-### 39–49s — approve + receipt
-
-**SAY:**
-
-> Looks right. Approving — approve and finalize as separate steps, then show the receipt.
-
-**PASTE:**
+**YOU PASTE:**
 
 ```
 Approved. Run approve and finalize as separate steps, then show the compact receipt.
 ```
 
-**WAIT** for compact receipt (`RECOVERY READY`, Kept, Boundary verification PASS, Launch manually).
+**SILENT** until receipt shows `RECOVERY READY`, Kept `tests/auth-compat.test.mjs`, Boundary verification `PASS`.
 
-**SAY** (short):
-
-> Boundary check passed. Only the approved file should carry forward.
-
-If Claude does not print the receipt, run this in the **fixture** repo (same tab is fine if still there):
-
-```bash
-node /path/to/claude-recovery/scripts/recovery.mjs receipt \
-  --manifest .claude/recovery/recovery-manifest.json
-```
-
-Copy the `cd '…' && claude --plugin-dir '…'` launch line from the receipt — you need it next.
+Copy the `cd '…' && claude --plugin-dir '…'` line from the receipt.
 
 ---
 
-### 49–55s — prove the worktree
+### Beat 5 — worktree proof (on-screen ~38–46s)
 
-**SAY:**
+**YOU SAY:**
 
-> Jumping into the recovery worktree — this should be a clean base plus just that test.
+> Clean worktree. Only the approved test should differ.
 
-**In the recovery worktree terminal**, paste the launch command from the receipt first if you are not already there, or open a second pane in the *same* window only if you must — prefer one window:
+**YOU TYPE** in the recovery worktree:
 
 ```bash
-cd '<worktree-from-receipt>'
 git diff --name-only
 ```
 
-Expected output:
+**Expect:**
 
 ```text
 tests/auth-compat.test.mjs
 ```
 
-**OVERLAY 3:** `Clean base. Only the approved test carries forward.`
-
-**SAY:**
-
-> Yep — just the compatibility test.
+**OVERLAY:** `Clean base. Only the approved test carries forward.`
 
 ---
 
-### 55–68s — fresh session proves the contract
+### Beat 6 — fresh session (on-screen ~46–60s)
 
-**SAY:**
+**YOU SAY:**
 
-> Fresh Claude session in that worktree. I’m not going to let it implement yet — I just want it to restate the boundary.
+> Fresh session. Just summarize the boundary — don’t implement yet.
 
-**Launch** (interactive, no `-p`) if not already running:
+**YOU RUN** (interactive, no `-p`):
 
 ```bash
-cd '<worktree-from-receipt>' && claude --plugin-dir '/path/to/claude-recovery'
+cd '<worktree-from-receipt>' && claude --plugin-dir '<plugin-root>'
 ```
 
-**PASTE:**
+**YOU PASTE:**
 
 ```
 Before editing, summarize the implementation boundary and required verification.
 ```
 
-**WAIT** for a summary that includes roughly:
+**SILENT** until it says roughly:
 
-- preserve `AuthProvider.authenticate(token)`
+- keep `AuthProvider.authenticate(token)`
 - no `ApiClient` migration
 - use an adapter
 - run `node --test tests/auth-compat.test.mjs`
 
-**SAY** (closing — then stop):
+**YOU SAY:**
 
-> That’s the handoff. Same constraints, clean tree, useful test kept. I’m going to stop before the next implementation.
+> That’s the handoff. Stopping here.
 
-**STOP RECORDING.** Do not wait for it to rewrite the auth layer.
+**STOP.** Do not wait for a second implementation.
 
 ---
 
-## Cold-read card (print / second monitor)
+## Cold-read card (print this)
 
 ```text
-SAY:   Mixed attempt — reject migration, keep the test.
-PASTE: Run `node --test tests/auth-compat.test.mjs` and show `git diff --stat`.
-       Do not edit anything. Stop after reporting the observable failure and changed files.
+SAY:  This attempt rewrote AuthProvider to verifyRequest and migrated ApiClient.
+      I also got a useful compat test and an expired-token finding.
+      I’m keeping the test. I’m rejecting the migration.
+PASTE:
+Run `node --test tests/auth-compat.test.mjs` and show `git diff --stat`.
 
-SAY:   Recover — keep what I trust.
-PASTE: /claude-recovery:recover
+Do not edit anything. Stop after reporting the observable failure and changed files.
 
-SAY:   Keep test + finding. Reject AuthProvider + ApiClient. Adapter.
-PASTE: Keep the compatibility test and expired-token finding.
+SAY:  Recover.
+PASTE:
+/claude-recovery:recover
 
-       Reject the AuthProvider interface change and ApiClient migration.
+SAY:  Keep the compat test and the expired-token finding.
+      Reject the AuthProvider interface change and the ApiClient migration.
+      Restart from the clean base, use an adapter, and require that test.
+PASTE:
+Keep the compatibility test and expired-token finding.
 
-       Restart from the clean base, use an adapter, and require the compatibility test before completion.
+Reject the AuthProvider interface change and ApiClient migration.
 
-SAY:   Contract looks right.
-PASTE: Approved. Run approve and finalize as separate steps, then show the compact receipt.
+Restart from the clean base, use an adapter, and require the compatibility test before completion.
 
-SAY:   Only the test should remain.
-TYPE:  git diff --name-only   (in recovery worktree)
+SAY:  Contract looks right — keep tests/auth-compat.test.mjs, discard provider
+      and api-client, next attempt uses an adapter.
+PASTE:
+Approved. Run approve and finalize as separate steps, then show the compact receipt.
 
-SAY:   Fresh session — just summarize the boundary.
-PASTE: Before editing, summarize the implementation boundary and required verification.
+SAY:  Clean worktree. Only the approved test should differ.
+TYPE: git diff --name-only
 
+SAY:  Fresh session. Just summarize the boundary — don’t implement yet.
+PASTE:
+Before editing, summarize the implementation boundary and required verification.
+
+SAY:  That’s the handoff. Stopping here.
 STOP.
 ```
 
 ---
 
-## If something stalls
+## Timing notes
 
-| Symptom | What to do on camera |
-|---------|----------------------|
-| Model still thinking | Stay quiet; trim the wait later; “waits trimmed” note |
-| Raw JSON only | Say “this is the plan output” and move on — don’t invent a prettier UI |
-| Receipt missing | Run the `receipt` command above; don’t fake it |
-| SessionStart didn’t inject | Stop. Say “injection didn’t fire — stopping.” Do not paste a fake contract as if it injected |
-| Urge to keep talking | Don’t. Silence is fine while Claude works |
+| Spoken line | ~seconds |
+|-------------|----------|
+| Opening (Beat 1) | 8 |
+| “Recover.” | 1 |
+| Decision (Beat 3) | 8 |
+| Contract line (Beat 4) | 5 |
+| Worktree line (Beat 5) | 3 |
+| Fresh-session line (Beat 6) | 3 |
+| Close | 2 |
+| **Spoken total** | **~30s** |
+
+On-screen waits push wall-clock higher; trim those in Loom so the published cut lands in **30–60s**.
 
 ---
 
-## What not to say
+## If something stalls
 
-- Don’t say rewind “can’t” keep later work in every case — say *you’re not using rewind because you want selective salvage*.
-- Don’t call the fixture “Claude went rogue.” It’s a mixed attempt you’re recovering from.
-- Don’t promise a full second implementation in this cut.
-- Don’t show install or preflight in the final Loom.
+| Symptom | You say (exact) |
+|---------|-----------------|
+| Long model wait | *(say nothing — trim later)* |
+| Only raw JSON | `This is the plan output.` |
+| No receipt | *(run receipt CLI off the cold-read; don’t invent output)* |
+| No SessionStart inject | `Injection didn’t fire. Stopping.` |
+| Want to keep talking | *(don’t)* |

@@ -1,4 +1,6 @@
-# Loom recording — primary final cut (~68s)
+# Loom recording — primary final cut (30–60s)
+
+Word-for-word narration + paste blocks: [`demo/SCRIPT.md`](SCRIPT.md)
 
 Prepare the deterministic auth-service fixture:
 
@@ -18,24 +20,28 @@ recovery manifest: absent
 approved pending contract: absent
 ```
 
-**Speaking script + paste cards:** [`demo/SCRIPT.md`](SCRIPT.md)  
-**Prompts only:** [`demo/PROMPTS.md`](PROMPTS.md) · `npm run demo` prints the full paste sequence.
+`npm run demo` prints the full paste sequence. Fixture files in play:
 
-## Final cut sequence
+- reject: `src/auth/provider.mjs` (`authenticate` → `verifyRequest`)
+- reject: `src/clients/api-client.mjs` (migrated client)
+- keep: `tests/auth-compat.test.mjs` + expired-token finding
+
+## Final cut sequence (published length 30–60s)
+
+Trim model waits so spoken lines + action fit the window. Spoken script alone is ~30s; see [`demo/SCRIPT.md`](SCRIPT.md).
 
 | Time | Action |
 |------|--------|
-| 0–8s | failing compatibility test + `git diff --stat` |
-| 8–18s | invoke `/claude-recovery:recover` and show observed evidence |
-| 18–27s | keep/reject/change decision |
-| 27–39s | readable Recovery Contract preview |
-| 39–49s | explicit approval + compact receipt |
-| 49–55s | `git diff --name-only` in recovery worktree |
-| 55–68s | fresh interactive session summarizes boundary |
+| 0–8s | failing compat test + `git diff --stat` |
+| 8–16s | `/claude-recovery:recover` + observed evidence |
+| 16–24s | keep/reject/change decision |
+| 24–38s | Recovery Contract preview + approve + compact receipt |
+| 38–46s | `git diff --name-only` in recovery worktree |
+| 46–60s | fresh interactive session summarizes boundary → stop |
 
-### 0–8 seconds
+### Exact prompts
 
-In Claude, paste the evidence prompt (or run through Bash with hooks loaded):
+**Evidence**
 
 ```
 Run `node --test tests/auth-compat.test.mjs` and show `git diff --stat`.
@@ -43,21 +49,13 @@ Run `node --test tests/auth-compat.test.mjs` and show `git diff --stat`.
 Do not edit anything. Stop after reporting the observable failure and changed files.
 ```
 
-Overlay:
+**Recovery**
 
-```text
-The implementation direction is rejected. The test is useful.
 ```
-
-### 8–18 seconds
-
-```text
 /claude-recovery:recover
 ```
 
-Show observed evidence and the keep/reject/change question.
-
-### 18–27 seconds
+**Decision**
 
 ```
 Keep the compatibility test and expired-token finding.
@@ -67,79 +65,41 @@ Reject the AuthProvider interface change and ApiClient migration.
 Restart from the clean base, use an adapter, and require the compatibility test before completion.
 ```
 
-Overlay:
-
-```text
-Keep the evidence. Reject the migration.
-```
-
-### 27–39 seconds
-
-Show a readable Recovery Contract preview (KEEP / DISCARD / NEXT). Prefer the human-readable contract fields over raw JSON.
-
-### 39–49 seconds
+**Approval**
 
 ```
 Approved. Run approve and finalize as separate steps, then show the compact receipt.
 ```
 
-Expected receipt shape:
-
-```text
-RECOVERY READY
-…
-Kept
-tests/auth-compat.test.mjs
-…
-Boundary verification
-PASS
-…
-Launch manually
-cd '<worktree>' && claude --plugin-dir '<plugin-root>'
-```
-
-### 49–55 seconds
-
-In the recovery worktree:
+**Worktree check**
 
 ```bash
 git diff --name-only
 ```
 
-It should show only:
+Expect only:
 
 ```text
 tests/auth-compat.test.mjs
 ```
 
-Overlay:
-
-```text
-Clean base. Only the approved test carries forward.
-```
-
-### 55–68 seconds
-
-Manually launch the **interactive** session (no `-p`):
-
-```bash
-cd '<worktree>' && claude --plugin-dir '<plugin-root>'
-```
-
-Ask:
+**Fresh-session proof**
 
 ```
 Before editing, summarize the implementation boundary and required verification.
 ```
 
-Expected content:
+Expect: preserve `AuthProvider.authenticate(token)`; no `ApiClient` migration; use an adapter; run `node --test tests/auth-compat.test.mjs`.
 
-- preserve `AuthProvider.authenticate(token)`
-- no `ApiClient` migration
-- use an adapter
-- run `node --test tests/auth-compat.test.mjs`
+## Overlays (only these three)
 
-End the recording here. Do not wait for a second implementation.
+```text
+The implementation direction is rejected. The test is useful.
+
+Keep the evidence. Reject the migration.
+
+Clean base. Only the approved test carries forward.
+```
 
 ## Recording rules
 
@@ -152,16 +112,7 @@ End the recording here. Do not wait for a second implementation.
 - Do not show raw JSON unless it is the only available output
 - Do not wait for the second implementation
 - End after the fresh session proves it received the contract
-
-## Overlays (only these three)
-
-```text
-The implementation direction is rejected. The test is useful.
-
-Keep the evidence. Reject the migration.
-
-Clean base. Only the approved test carries forward.
-```
+- Say only the lines in [`demo/SCRIPT.md`](SCRIPT.md) — do not paraphrase
 
 ## Guardrails
 

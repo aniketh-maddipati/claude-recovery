@@ -24,12 +24,14 @@ All notable changes to **claude-recovery** are documented here.
 - Demo fixture is an honest deterministic mixed-attempt overlay (no seeded `decision.json` / fake `commands.jsonl`)
 - README tightened for public beta (accurate rewind/branch distinction; tech reference below product explanation)
 - Primary demo/recording materials reduced to one auth-service HN scenario; `npm run demo` prints the full paste sequence
+- Demo recording guide retargeted to a 30–60s final cut with word-for-word narration in `demo/SCRIPT.md`
 - Version bumped to 0.1.2 across package and plugin manifests
 
 ### Added (beta polish)
 
 - `.github/ISSUE_TEMPLATE/beta-feedback.yml` — sanitized beta feedback questionnaire
 - `docs/SHOW_HN.md` — short Show HN draft
+- `demo/SCRIPT.md` — word-for-word 30–60s Loom teleprompter synced to the auth-service fixture (`verifyRequest` / `ApiClient` / `auth-compat` / expired-token), with exact paste prompts
 
 ### Fixed
 
