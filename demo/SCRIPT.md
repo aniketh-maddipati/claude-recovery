@@ -23,25 +23,59 @@ Open this file beside Loom. Follow **top → bottom**. Say **only** the quoted l
 
 ## Micro-steps — exact order (use this while recording)
 
-Legend: **SAY** = speak aloud · **PASTE** = paste into Claude · **TYPE** = type in terminal · **WAIT** = say nothing · **CODE?** = do you edit source files?
+Legend: **SAY** = speak aloud · **PASTE** = paste into Claude · **TYPE** = type in terminal · **WAIT** = say nothing · **WHERE** = directory you must be in · **CODE?** = do you edit source files?
+
+### Directory map (memorize this)
+
+Use your real home path. Example repo: `~/claude-recovery`.
+
+| Label | Path | When |
+|-------|------|------|
+| **REPO** | `~/claude-recovery` | Off camera only (`npm run demo:record`, `npm run demo:reset`) |
+| **FIXTURE** | `~/claude-recovery/.demo/auth-service` | Steps 1–17 — first Claude session (mixed attempt) |
+| **WORKTREE** | `~/claude-recovery/.demo/auth-service/.claude/recovery-worktrees/<name>` | Steps 19–25 — after finalize (clean base + kept test only) |
+
+**Rule:** Stay in **FIXTURE** for the whole first Claude session. Only `cd` to **WORKTREE** after the receipt (Step 19 onward). Never run the demo from **REPO** root on camera.
+
+Check where you are:
+
+```bash
+pwd
+# FIXTURE  → …/claude-recovery/.demo/auth-service
+# WORKTREE → …/claude-recovery/.demo/auth-service/.claude/recovery-worktrees/…
+```
+
+The receipt’s `Launch manually` line is the exact `cd … && claude …` for **WORKTREE**.
 
 ### Off camera (before Loom)
 
-| Step | Action | CODE? |
-|------|--------|-------|
-| 0.1 | TYPE: `npm run demo:record` | No |
-| 0.2 | Read the printed launch command | No |
-| 0.3 | Open Loom, mic on, one terminal 16–18 pt | No |
-| 0.4 | Open this file (`demo/SCRIPT.md`) beside Loom | No |
-| 0.5 | **Start Loom recording** | No |
-| 0.6 | TYPE in terminal the launch command, e.g. `cd .demo/auth-service && claude --plugin-dir /path/to/claude-recovery` | No |
-| 0.7 | WAIT until Claude Code is ready in the fixture | No |
+**WHERE:** start in **REPO** (`~/claude-recovery`)
+
+| Step | Action | WHERE | CODE? |
+|------|--------|-------|-------|
+| 0.1 | TYPE: `npm run demo:record` | **REPO** | No |
+| 0.2 | Read the printed launch command | **REPO** | No |
+| 0.3 | Open Loom, mic on, one terminal 16–18 pt | — | No |
+| 0.4 | Open this file (`demo/SCRIPT.md`) beside Loom | — | No |
+| 0.5 | **Start Loom recording** | — | No |
+| 0.6 | TYPE the launch command (see below) | → **FIXTURE** | No |
+| 0.7 | WAIT until Claude Code is ready | **FIXTURE** | No |
+
+**Step 0.6 — TYPE exactly** (replace with your paths):
+
+```bash
+cd ~/claude-recovery/.demo/auth-service && claude --plugin-dir ~/claude-recovery
+```
+
+After this, **stay in FIXTURE** until Step 19.
 
 ---
 
 ### On camera — step by step
 
 #### Step 1 — SAY (skill intro)
+
+**WHERE:** **FIXTURE** — Claude Code open, terminal cwd = `.demo/auth-service`
 
 **SAY exactly:**
 
@@ -53,6 +87,8 @@ Legend: **SAY** = speak aloud · **PASTE** = paste into Claude · **TYPE** = typ
 
 #### Step 2 — SAY (explain fake repo)
 
+**WHERE:** **FIXTURE** (same Claude session)
+
 **SAY exactly:**
 
 > Quick context — this is a fake mini app, not a real product. AuthProvider is just a login checker: you pass a token string, it says valid or not. The function is called authenticate. ApiClient is the code that calls it. Claude renamed authenticate to verifyRequest and rewrote the client to match. That's the rejected migration. It also added a test that says authenticate must still exist — that test fails right now, and that's the useful part I want to keep.
@@ -63,6 +99,8 @@ Legend: **SAY** = speak aloud · **PASTE** = paste into Claude · **TYPE** = typ
 
 #### Step 3 — SAY (intro evidence)
 
+**WHERE:** **FIXTURE**
+
 **SAY exactly:**
 
 > Let me show the evidence first — the failing test and what files changed.
@@ -72,6 +110,8 @@ Legend: **SAY** = speak aloud · **PASTE** = paste into Claude · **TYPE** = typ
 ---
 
 #### Step 4 — PASTE (evidence prompt)
+
+**WHERE:** **FIXTURE** — paste into this Claude session (not the terminal)
 
 **PASTE into Claude exactly:**
 
@@ -87,6 +127,8 @@ Do not edit anything. Stop after reporting the observable failure and changed fi
 
 #### Step 5 — WAIT (evidence output)
 
+**WHERE:** **FIXTURE**
+
 **WAIT** until Claude finishes. Do not speak.
 
 **Screen must show:**
@@ -100,6 +142,8 @@ Do not edit anything. Stop after reporting the observable failure and changed fi
 
 #### Step 6 — SAY (point at evidence)
 
+**WHERE:** **FIXTURE**
+
 **SAY exactly:**
 
 > So authenticate is gone, verifyRequest is in its place, the client was migrated, and the guardrail test is failing. I want to keep that test — not the rename.
@@ -112,6 +156,8 @@ Do not edit anything. Stop after reporting the observable failure and changed fi
 
 #### Step 7 — SAY (intro recover)
 
+**WHERE:** **FIXTURE**
+
 **SAY exactly:**
 
 > I'm invoking the recover skill. It captures Git state and command evidence, then asks me what to keep and reject.
@@ -121,6 +167,8 @@ Do not edit anything. Stop after reporting the observable failure and changed fi
 ---
 
 #### Step 8 — PASTE (recover skill)
+
+**WHERE:** **FIXTURE** — paste into Claude
 
 **PASTE into Claude exactly:**
 
@@ -134,6 +182,8 @@ Do not edit anything. Stop after reporting the observable failure and changed fi
 
 #### Step 9 — WAIT (recover capture)
 
+**WHERE:** **FIXTURE**
+
 **WAIT** until Claude shows observed evidence and asks what to keep/reject/change.
 
 **CODE?** No
@@ -141,6 +191,8 @@ Do not edit anything. Stop after reporting the observable failure and changed fi
 ---
 
 #### Step 10 — SAY (intro decision)
+
+**WHERE:** **FIXTURE**
 
 **SAY exactly:**
 
@@ -151,6 +203,8 @@ Do not edit anything. Stop after reporting the observable failure and changed fi
 ---
 
 #### Step 11 — PASTE (decision)
+
+**WHERE:** **FIXTURE** — paste into Claude
 
 **PASTE into Claude exactly:**
 
@@ -170,6 +224,8 @@ Restart from the clean base, use an adapter, and require the compatibility test 
 
 #### Step 12 — WAIT (contract preview)
 
+**WHERE:** **FIXTURE**
+
 **WAIT** until Recovery Contract preview is readable (KEEP / DISCARD / NEXT).
 
 **CODE?** No
@@ -177,6 +233,8 @@ Restart from the clean base, use an adapter, and require the compatibility test 
 ---
 
 #### Step 13 — SAY (intro approve)
+
+**WHERE:** **FIXTURE**
 
 **SAY exactly:**
 
@@ -187,6 +245,8 @@ Restart from the clean base, use an adapter, and require the compatibility test 
 ---
 
 #### Step 14 — PASTE (approve)
+
+**WHERE:** **FIXTURE** — paste into Claude
 
 **PASTE into Claude exactly:**
 
@@ -199,6 +259,8 @@ Approved. Run approve and finalize as separate steps, then show the compact rece
 ---
 
 #### Step 15 — WAIT (receipt)
+
+**WHERE:** **FIXTURE** (still the first Claude session)
 
 **WAIT** until compact receipt appears:
 
@@ -218,6 +280,8 @@ cd '…' && claude --plugin-dir '…'
 
 #### Step 16 — SAY (optional, boundary)
 
+**WHERE:** **FIXTURE**
+
 **SAY exactly:**
 
 > Boundary verification passed — rejected files match the clean base again.
@@ -228,21 +292,25 @@ cd '…' && claude --plugin-dir '…'
 
 #### Step 17 — COPY (launch line)
 
+**WHERE:** **FIXTURE** (read receipt on screen)
+
 **COPY** the `cd '…' && claude --plugin-dir '…'` line from the receipt. Do not paste yet.
 
 **CODE?** No
 
-**If no receipt appeared, PASTE this once into Claude (fallback, still no coding):**
+**If no receipt appeared, PASTE into Claude while still in FIXTURE (fallback):**
 
 ```
-node /path/to/claude-recovery/scripts/recovery.mjs receipt --manifest .claude/recovery/recovery-manifest.json
+node ~/claude-recovery/scripts/recovery.mjs receipt --manifest .claude/recovery/recovery-manifest.json
 ```
 
-Then WAIT and COPY the launch line.
+Paths are relative to **FIXTURE**. Then WAIT and COPY the launch line.
 
 ---
 
 #### Step 18 — SAY (intro worktree check)
+
+**WHERE:** about to leave **FIXTURE** → go to **WORKTREE**
 
 **SAY exactly:**
 
@@ -254,12 +322,18 @@ Then WAIT and COPY the launch line.
 
 #### Step 19 — TYPE (go to worktree + diff)
 
-**TYPE in terminal** (use path from receipt):
+**WHERE:** **WORKTREE** — exit or pause Claude if needed; use the terminal shell
+
+**TYPE in terminal** (path comes from the receipt — under `.demo/auth-service/.claude/recovery-worktrees/`):
 
 ```bash
-cd '/path/from/receipt'
+cd ~/claude-recovery/.demo/auth-service/.claude/recovery-worktrees/<name-from-receipt>
 git diff --name-only
 ```
+
+Or paste the full `cd '…'` line from the receipt, then run `git diff --name-only`.
+
+**Confirm:** `pwd` ends with `recovery-worktrees/<name>`, not `.demo/auth-service`.
 
 **CODE?** No — two shell commands, no file edits
 
@@ -273,6 +347,8 @@ tests/auth-compat.test.mjs
 
 #### Step 20 — SAY (worktree result)
 
+**WHERE:** **WORKTREE** (terminal still here)
+
 **SAY exactly:**
 
 > One file. That's the selective salvage.
@@ -285,6 +361,8 @@ tests/auth-compat.test.mjs
 
 #### Step 21 — SAY (intro fresh session)
 
+**WHERE:** **WORKTREE** (terminal)
+
 **SAY exactly:**
 
 > Last step — a fresh Claude session in that worktree. SessionStart should inject the approved contract. I'm not asking it to implement yet; I just want it to restate the boundary so viewers can see the handoff worked.
@@ -295,19 +373,23 @@ tests/auth-compat.test.mjs
 
 #### Step 22 — TYPE (launch fresh Claude)
 
+**WHERE:** **WORKTREE** — launch second Claude session from this directory
+
 **TYPE/PASTE in terminal** the launch line you copied in Step 17:
 
 ```bash
-cd '/path/from/receipt' && claude --plugin-dir '/path/to/claude-recovery'
+cd ~/claude-recovery/.demo/auth-service/.claude/recovery-worktrees/<name-from-receipt> && claude --plugin-dir ~/claude-recovery
 ```
 
-**Important:** interactive launch, **no** `-p` flag.
+**Important:** interactive launch, **no** `-p` flag. Claude’s cwd must be **WORKTREE**, not FIXTURE.
 
 **CODE?** No · **WAIT** until new Claude session is ready
 
 ---
 
 #### Step 23 — PASTE (fresh session proof)
+
+**WHERE:** **WORKTREE** — paste into the **new** Claude session (not FIXTURE)
 
 **PASTE into the NEW Claude session exactly:**
 
@@ -321,6 +403,8 @@ Before editing, summarize the implementation boundary and required verification.
 
 #### Step 24 — WAIT (boundary summary)
 
+**WHERE:** **WORKTREE** (second Claude session)
+
 **WAIT** until Claude summarizes. It should mention:
 
 - keep `authenticate(token)` — not `verifyRequest`
@@ -333,6 +417,8 @@ Before editing, summarize the implementation boundary and required verification.
 ---
 
 #### Step 25 — SAY (close)
+
+**WHERE:** **WORKTREE**
 
 **SAY exactly:**
 
@@ -351,6 +437,12 @@ Before editing, summarize the implementation boundary and required verification.
 ---
 
 ### Quick tally
+
+| Phase | WHERE |
+|-------|-------|
+| Off camera setup | **REPO** |
+| Steps 1–17 | **FIXTURE** (`.demo/auth-service`) |
+| Steps 19–25 | **WORKTREE** (`.demo/auth-service/.claude/recovery-worktrees/…`) |
 
 | You do on camera | How many times |
 |------------------|----------------|

@@ -168,6 +168,11 @@ Scenario (plain English — read demo/SCRIPT.md "READ THIS FIRST"):
 
 Full word-for-word script + viewer cues: demo/SCRIPT.md
 
+Directories (see demo/SCRIPT.md):
+  REPO     = claude-recovery repo root (off camera only)
+  FIXTURE  = .demo/auth-service (Steps 1-17, first Claude session)
+  WORKTREE = .demo/auth-service/.claude/recovery-worktrees/<name> (Steps 19-25)
+
 ────────────────────────────────────────────────────────────────
 Complete interactive sequence (paste in order)
 ────────────────────────────────────────────────────────────────

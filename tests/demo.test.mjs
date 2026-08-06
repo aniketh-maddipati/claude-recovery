@@ -110,7 +110,10 @@ test('PROMPTS.md and RECORDING.md match the implemented flow', () => {
   assert.match(script, /YOU SAY/);
   assert.match(script, /YOU PASTE/);
   assert.match(script, /VIEWERS SHOULD SEE/);
-  assert.match(script, /Micro-steps/);
+  assert.match(script, /Directory map/);
+  assert.match(script, /\*\*FIXTURE\*\*/);
+  assert.match(script, /\*\*WORKTREE\*\*/);
+  assert.match(script, /Steps 1–17/);
   assert.match(script, /Step 1 — SAY/);
   assert.match(script, /Step 4 — PASTE/);
   assert.match(script, /Step 19 — TYPE/);
