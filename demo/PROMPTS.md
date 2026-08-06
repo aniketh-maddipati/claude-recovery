@@ -176,11 +176,13 @@ node ~/claude-recovery/scripts/recovery.mjs receipt --manifest .claude/recovery/
 **SAY:**
 > In the recovery worktree, only the approved test file should differ. Login checker and client should be back to authenticate, not verifyRequest.
 
-**TYPE:**
+**TYPE** — use the worktree folder name from your receipt (not `<name-from-receipt>`):
 ```bash
-cd ~/claude-recovery/.demo/auth-service/.claude/recovery-worktrees/<name-from-receipt>
+cd ~/claude-recovery/.demo/auth-service/.claude/recovery-worktrees/recovery-YYYYMMDD-HHMMSS
 git diff --name-only
 ```
+
+**Approve** the bash prompt if manual mode asks (this is expected).
 
 **SEE:** Only `tests/auth-compat.test.mjs`
 

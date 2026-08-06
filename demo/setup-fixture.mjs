@@ -180,33 +180,32 @@ ${result.pluginZipPath && result.launchCommand !== result.directoryLaunchCommand
 
 ── Paste into Claude (FIXTURE) ──
 
-1) Evidence:
+1) Evidence — paste first:
 ${indentBlock(evidence)}
 
-2) Recover (paste this — works even if /claude-recovery:recover is unknown):
+2) Recover — paste next; WAIT until Claude asks what to keep/reject/change:
 ${indentBlock(result.recoverPaste)}
 
-  Or try slash: /claude-recovery:recover
+  (Optional slash if /help lists it: /claude-recovery:recover)
 
-3) Decision:
+3) Decision — paste ONLY after Claude asks the keep/reject question:
 ${indentBlock(result.decisionPaste)}
 
-4) Approve:
+4) Approve — paste ONLY after contract preview looks right:
 ${indentBlock(result.approvePaste)}
 
-── Type in terminal (WORKTREE, after receipt) ──
+── After receipt (WORKTREE) ──
 
-git diff --name-only
+5) In your terminal (not Claude), cd to the worktree path FROM THE RECEIPT, then:
+   git diff --name-only
+   (expect: only tests/auth-compat.test.mjs)
 
-── Launch fresh Claude (WORKTREE) ──
+6) Launch fresh Claude from receipt launch line (same --plugin-dir / zip as Step 0)
 
-<cd + claude line from receipt>
-
-── Paste into Claude (WORKTREE) ──
-
+7) Paste into new Claude session:
 ${indentBlock(result.freshSessionPaste)}
 
-Full teleprompter: demo/PROMPTS.md
+Full teleprompter (SAY lines + timing): demo/PROMPTS.md
 `);
 }
 
