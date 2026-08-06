@@ -184,7 +184,7 @@ git diff --name-only
 
 ${indentBlock(result.freshSessionPaste)}
 
-Full card + optional say lines: demo/PROMPTS.md
+Full teleprompter: demo/PROMPTS.md
 `);
 }
 

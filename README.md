@@ -39,7 +39,7 @@ Failing compat test + git diff
 → clean worktree + fresh session with boundary
 ```
 
-Record with **Loom**. Card + prompts: [`demo/PROMPTS.md`](demo/PROMPTS.md) · Cut notes: [`demo/RECORDING.md`](demo/RECORDING.md)
+Record with **Loom**. Teleprompter: [`demo/PROMPTS.md`](demo/PROMPTS.md) · Cut notes: [`demo/RECORDING.md`](demo/RECORDING.md)
 
 ## Try the fixture
 

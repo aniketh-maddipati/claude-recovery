@@ -1,6 +1,9 @@
-# Demo cold-read card
+# Demo teleprompter
 
-One file. Follow **Line-by-line** while recording. No coding on camera.
+Read **SAY** lines word for word. Paste/type exactly as shown. Stay silent where it says WAIT.
+
+**FIXTURE:** `~/claude-recovery/.demo/auth-service`  
+**WORKTREE:** `~/claude-recovery/.demo/auth-service/.claude/recovery-worktrees/<name-from-receipt>`
 
 ---
 
@@ -8,131 +11,105 @@ One file. Follow **Line-by-line** while recording. No coding on camera.
 
 ```bash
 cd ~/claude-recovery
-npm run demo:reset          # if preflight fails on commands.jsonl
+npm run demo:reset
 npm run demo:preflight
 npm run demo
 ```
 
-| Where | Path |
-|-------|------|
-| **FIXTURE** | `~/claude-recovery/.demo/auth-service` |
-| **WORKTREE** | `~/claude-recovery/.demo/auth-service/.claude/recovery-worktrees/<name-from-receipt>` |
+Start Loom. Open this file beside the terminal.
 
 ---
 
-## Line-by-line (exact order)
+## Step 0 — Launch
 
-### Step 0 — Launch
+**WHERE:** terminal → **FIXTURE**
 
-| | |
-|---|---|
-| **WHERE** | Terminal → **FIXTURE** |
-| **TYPE** | `cd ~/claude-recovery/.demo/auth-service && claude --plugin-dir ~/claude-recovery` |
-| **SEE** | Claude Code open; `pwd` ends in `.demo/auth-service` |
+**TYPE:**
+```bash
+cd ~/claude-recovery/.demo/auth-service && claude --plugin-dir ~/claude-recovery
+```
 
-Start Loom before Step 0.
-
----
-
-### Step 1 — Intro (optional)
-
-| | |
-|---|---|
-| **WHERE** | **FIXTURE** (Claude session) |
-| **SAY** | Mixed attempt — reject the rename, keep the test. Recovering selectively, not rewinding. |
-| **PASTE** | — |
-| **SEE** | You in Claude; no recovery receipt yet |
+**SEE:** Claude Code open; `pwd` ends in `.demo/auth-service`
 
 ---
 
-### Step 2 — Context (optional)
+## Step 1 — Why this exists
 
-| | |
-|---|---|
-| **WHERE** | **FIXTURE** |
-| **SAY** | Fake mini app: login checker was renamed authenticate to verifyRequest. Useful guardrail test fails. Keeping the test. |
-| **PASTE** | — |
-| **SEE** | Same session |
+**WHERE:** **FIXTURE**
 
----
+**SAY:**
+> I built claude-recovery for when a Claude Code attempt is mixed. Rewind throws away everything after a checkpoint. Here I reject the implementation, but a test or finding is still useful. This lets me choose what survives and hand the next session a Recovery Contract.
 
-### Step 3 — Evidence intro
+**PASTE:** —
 
-| | |
-|---|---|
-| **WHERE** | **FIXTURE** |
-| **SAY** | Failing test plus diff — that's the evidence. |
-| **PASTE** | — |
-| **SEE** | — |
+**SEE:** You in Claude; no receipt yet
 
 ---
 
-### Step 4 — Evidence
+## Step 2 — What this repo is
 
-| | |
-|---|---|
-| **WHERE** | **FIXTURE** — paste into Claude |
-| **SAY** | *(silent while Claude works)* |
-| **PASTE** | |
+**WHERE:** **FIXTURE**
 
+**SAY:**
+> Quick context. This is a fake mini app, not a real product. AuthProvider is just a login checker — you pass a token, it says valid or not. The function is called authenticate. ApiClient is the code that calls it. Claude renamed it to verifyRequest and migrated the client. That's the rejected part. It also added a test that says authenticate must still exist. That test fails, and that's what I want to keep.
+
+**PASTE:** —
+
+**SEE:** Same Claude session in FIXTURE
+
+---
+
+## Step 3 — Show evidence
+
+**WHERE:** **FIXTURE**
+
+**SAY:**
+> Let me show the evidence — the failing test and what files changed.
+
+**PASTE into Claude:**
 ```
 Run `node --test tests/auth-compat.test.mjs` and show `git diff --stat`.
 
 Do not edit anything. Stop after reporting the observable failure and changed files.
 ```
 
-| **SEE** | Compat test **fails**; diff lists `src/auth/provider.mjs`, `src/clients/api-client.mjs`, `tests/auth-compat.test.mjs` |
+**WAIT** — say nothing until output appears
+
+**SEE:** Compat test fails; diff lists `provider.mjs`, `api-client.mjs`, `auth-compat.test.mjs`
+
+**SAY:**
+> So authenticate is gone, verifyRequest is in its place, the client was migrated, and the guardrail test is failing. I want the test, not the rename.
 
 **Overlay:** `The implementation direction is rejected. The test is useful.`
 
 ---
 
-### Step 5 — Recover intro
+## Step 4 — Recover
 
-| | |
-|---|---|
-| **WHERE** | **FIXTURE** |
-| **SAY** | Invoking recover. |
-| **PASTE** | — |
-| **SEE** | — |
+**WHERE:** **FIXTURE**
 
----
+**SAY:**
+> I'm invoking recover. It captures Git state and command evidence, then asks me what to keep and reject.
 
-### Step 6 — Recover
-
-| | |
-|---|---|
-| **WHERE** | **FIXTURE** — paste into Claude |
-| **SAY** | *(silent)* |
-| **PASTE** | |
-
+**PASTE into Claude:**
 ```
 /claude-recovery:recover
 ```
 
-| **SEE** | Skill runs; observed evidence; question: *What should the next attempt keep, reject, or change?* |
+**WAIT**
+
+**SEE:** Observed evidence; question: *What should the next attempt keep, reject, or change?*
 
 ---
 
-### Step 7 — Decision intro
+## Step 5 — Decide
 
-| | |
-|---|---|
-| **WHERE** | **FIXTURE** |
-| **SAY** | Keep the test and finding. Reject the migration. Adapter on the next pass. |
-| **PASTE** | — |
-| **SEE** | — |
+**WHERE:** **FIXTURE**
 
----
+**SAY:**
+> I'm keeping the compatibility test and the expired-token finding. I'm rejecting the AuthProvider change and the ApiClient migration. Next attempt starts clean, uses an adapter, and has to pass that test.
 
-### Step 8 — Decision
-
-| | |
-|---|---|
-| **WHERE** | **FIXTURE** — paste into Claude |
-| **SAY** | *(silent)* |
-| **PASTE** | |
-
+**PASTE into Claude:**
 ```
 Keep the compatibility test and expired-token finding.
 
@@ -141,179 +118,177 @@ Reject the AuthProvider interface change and ApiClient migration.
 Restart from the clean base, use an adapter, and require the compatibility test before completion.
 ```
 
-| **SEE** | Recovery Contract preview: **KEEP** test + finding · **DISCARD** provider + client · **NEXT** adapter + run test |
+**WAIT**
+
+**SEE:** Contract preview — KEEP test + finding · DISCARD provider + client · NEXT adapter
 
 **Overlay:** `Keep the evidence. Reject the migration.`
 
 ---
 
-### Step 9 — Approve intro
+## Step 6 — Approve
 
-| | |
-|---|---|
-| **WHERE** | **FIXTURE** |
-| **SAY** | Contract looks right. Approving. |
-| **PASTE** | — |
-| **SEE** | Contract on screen |
+**WHERE:** **FIXTURE**
 
----
+**SAY:**
+> Contract looks right — keep the test, discard the login checker and client changes, adapter on the next pass. Approving explicitly.
 
-### Step 10 — Approve
-
-| | |
-|---|---|
-| **WHERE** | **FIXTURE** — paste into Claude |
-| **SAY** | *(silent)* |
-| **PASTE** | |
-
+**PASTE into Claude:**
 ```
 Approved. Run approve and finalize as separate steps, then show the compact receipt.
 ```
 
-| **SEE** | Receipt: `RECOVERY READY` · Kept `tests/auth-compat.test.mjs` · Boundary `PASS` · Launch line |
+**WAIT**
 
-Copy the `cd '…' && claude --plugin-dir '…'` line from receipt.
+**SEE:** Receipt — `RECOVERY READY` · Kept `tests/auth-compat.test.mjs` · Boundary `PASS` · launch line
 
-**If no receipt, PASTE into Claude:**
+**SAY:**
+> Boundary verification passed. Rejected files match the clean base again.
 
+Copy the `cd '…' && claude --plugin-dir '…'` line from the receipt.
+
+**If no receipt, PASTE:**
 ```
 node ~/claude-recovery/scripts/recovery.mjs receipt --manifest .claude/recovery/recovery-manifest.json
 ```
 
 ---
 
-### Step 11 — Worktree check intro
+## Step 7 — Prove worktree
 
-| | |
-|---|---|
-| **WHERE** | Leave **FIXTURE** → go to **WORKTREE** |
-| **SAY** | Only the approved test should differ from the clean base. |
-| **PASTE** | — |
-| **SEE** | — |
+**WHERE:** terminal → **WORKTREE** (leave FIXTURE)
 
----
+**SAY:**
+> In the recovery worktree, only the approved test file should differ. Login checker and client should be back to authenticate, not verifyRequest.
 
-### Step 12 — Worktree check
-
-| | |
-|---|---|
-| **WHERE** | Terminal → **WORKTREE** |
-| **SAY** | *(silent)* |
-| **TYPE** | |
-
+**TYPE:**
 ```bash
 cd ~/claude-recovery/.demo/auth-service/.claude/recovery-worktrees/<name-from-receipt>
 git diff --name-only
 ```
 
-| **SEE** | Only `tests/auth-compat.test.mjs` |
+**SEE:** Only `tests/auth-compat.test.mjs`
+
+**SAY:**
+> One file. That's the selective salvage.
 
 **Overlay:** `Clean base. Only the approved test carries forward.`
 
 ---
 
-### Step 13 — Fresh session intro
+## Step 8 — Fresh session
 
-| | |
-|---|---|
-| **WHERE** | Terminal → **WORKTREE** |
-| **SAY** | Fresh session — summarize the boundary, don't implement yet. |
-| **PASTE** | — |
-| **SEE** | — |
+**WHERE:** terminal → **WORKTREE**
 
----
+**SAY:**
+> Last step — a fresh Claude session in that worktree. SessionStart should inject the approved contract. I'm not asking it to implement yet; I just want it to restate the boundary.
 
-### Step 14 — Launch fresh Claude
-
-| | |
-|---|---|
-| **WHERE** | Terminal → **WORKTREE** |
-| **SAY** | *(silent)* |
-| **TYPE** | Launch line from receipt (no `-p`): |
-
+**TYPE** (no `-p`):
 ```bash
 cd '<worktree-from-receipt>' && claude --plugin-dir ~/claude-recovery
 ```
 
-| **SEE** | New Claude session; `pwd` is **WORKTREE**, not FIXTURE |
+**WAIT** until new Claude session is ready
 
----
+**SEE:** New session; `pwd` is WORKTREE
 
-### Step 15 — Fresh session proof
-
-| | |
-|---|---|
-| **WHERE** | **WORKTREE** — paste into **new** Claude session |
-| **SAY** | *(silent)* |
-| **PASTE** | |
-
+**PASTE into new Claude:**
 ```
 Before editing, summarize the implementation boundary and required verification.
 ```
 
-| **SEE** | Summary mentions: keep `authenticate(token)` · no ApiClient migration · adapter · run compat test |
+**WAIT**
+
+**SEE:** Summary — keep `authenticate(token)` · no ApiClient migration · adapter · run compat test
 
 ---
 
-### Step 16 — Close
+## Step 9 — Close
 
-| | |
-|---|---|
-| **WHERE** | **WORKTREE** |
-| **SAY** | That's the handoff. Stopping here. |
-| **PASTE** | — |
-| **SEE** | — |
+**WHERE:** **WORKTREE**
 
-**Stop Loom.** Do not implement.
+**SAY:**
+> Same boundary, clean tree, useful test kept. That's the handoff — stopping before the second implementation.
+
+**STOP LOOM.** Do not implement.
 
 ---
 
-## Quick copy blocks (paste/type only)
+## Teleprompter-only (read straight through)
 
-**FIXTURE — paste into Claude:**
+Paste/type where marked. `[PASTE]` / `[TYPE]` / `[WAIT]`.
 
 ```
+[SAY] I built claude-recovery for when a Claude Code attempt is mixed. Rewind throws away everything after a checkpoint. Here I reject the implementation, but a test or finding is still useful. This lets me choose what survives and hand the next session a Recovery Contract.
+
+[SAY] Quick context. This is a fake mini app, not a real product. AuthProvider is just a login checker — you pass a token, it says valid or not. The function is called authenticate. ApiClient is the code that calls it. Claude renamed it to verifyRequest and migrated the client. That's the rejected part. It also added a test that says authenticate must still exist. That test fails, and that's what I want to keep.
+
+[SAY] Let me show the evidence — the failing test and what files changed.
+
+[PASTE]
 Run `node --test tests/auth-compat.test.mjs` and show `git diff --stat`.
 
 Do not edit anything. Stop after reporting the observable failure and changed files.
-```
 
-```
+[WAIT — SEE failing test + diff on provider, client, test]
+
+[SAY] So authenticate is gone, verifyRequest is in its place, the client was migrated, and the guardrail test is failing. I want the test, not the rename.
+
+[SAY] I'm invoking recover. It captures Git state and command evidence, then asks me what to keep and reject.
+
+[PASTE]
 /claude-recovery:recover
-```
 
-```
+[WAIT — SEE evidence + keep/reject question]
+
+[SAY] I'm keeping the compatibility test and the expired-token finding. I'm rejecting the AuthProvider change and the ApiClient migration. Next attempt starts clean, uses an adapter, and has to pass that test.
+
+[PASTE]
 Keep the compatibility test and expired-token finding.
 
 Reject the AuthProvider interface change and ApiClient migration.
 
 Restart from the clean base, use an adapter, and require the compatibility test before completion.
-```
 
-```
+[WAIT — SEE contract preview: KEEP test, DISCARD provider/client]
+
+[SAY] Contract looks right — keep the test, discard the login checker and client changes, adapter on the next pass. Approving explicitly.
+
+[PASTE]
 Approved. Run approve and finalize as separate steps, then show the compact receipt.
-```
 
-**WORKTREE — type in terminal:**
+[WAIT — SEE receipt: RECOVERY READY, Kept test, Boundary PASS]
 
-```bash
+[SAY] Boundary verification passed. Rejected files match the clean base again.
+
+[SAY] In the recovery worktree, only the approved test file should differ. Login checker and client should be back to authenticate, not verifyRequest.
+
+[TYPE]
 cd ~/claude-recovery/.demo/auth-service/.claude/recovery-worktrees/<name-from-receipt>
 git diff --name-only
-```
 
-```bash
+[SEE only tests/auth-compat.test.mjs]
+
+[SAY] One file. That's the selective salvage.
+
+[SAY] Last step — a fresh Claude session in that worktree. SessionStart should inject the approved contract. I'm not asking it to implement yet; I just want it to restate the boundary.
+
+[TYPE]
 cd '<worktree-from-receipt>' && claude --plugin-dir ~/claude-recovery
-```
 
-**WORKTREE — paste into new Claude:**
-
-```
+[PASTE into new Claude]
 Before editing, summarize the implementation boundary and required verification.
+
+[WAIT — SEE summary: authenticate, no migration, adapter, run test]
+
+[SAY] Same boundary, clean tree, useful test kept. That's the handoff — stopping before the second implementation.
+
+STOP.
 ```
 
 ---
 
-## Loom overlays (optional)
+## Loom overlays
 
 ```text
 The implementation direction is rejected. The test is useful.

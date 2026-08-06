@@ -19,7 +19,7 @@ Usage: ./demo/record.sh [--launch]
 
   1. npm run demo:preflight
   2. Builds fixture + prints paste/type sequence
-  3. Open demo/PROMPTS.md for the cold-read card
+  3. Open demo/PROMPTS.md for the teleprompter
 
 Record with Loom. Open demo/PROMPTS.md beside the terminal.
 EOF
@@ -48,10 +48,10 @@ RECORD WITH LOOM — use demo/PROMPTS.md
 
   $LAUNCH
 
-3) Follow demo/PROMPTS.md — paste/type in order
+3) Follow demo/PROMPTS.md — read SAY lines, paste/type in order
 4) Stop after fresh session summarizes the boundary
 
-Card: $PROMPTS
+Teleprompter: $PROMPTS
 ================================================================
 EOF
 

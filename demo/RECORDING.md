@@ -1,6 +1,6 @@
 # Loom recording (45–75s)
 
-Cold-read card + paste/type sequence: [`demo/PROMPTS.md`](PROMPTS.md)
+Teleprompter (SAY / PASTE / SEE): [`demo/PROMPTS.md`](PROMPTS.md)
 
 ```bash
 npm run demo:reset      # if a rehearsal left commands.jsonl

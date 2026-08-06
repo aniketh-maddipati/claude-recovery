@@ -91,15 +91,15 @@ test('setupDemoFixture strips stale commands.jsonl from a previous rehearsal', (
   assert.doesNotThrow(() => assertHonestDemoFixture(result.fixture));
 });
 
-test('PROMPTS.md is the cold-read card with paste prompts and commands', () => {
+test('PROMPTS.md is the teleprompter with say, paste, and see cues', () => {
   const prompts = readFileSync(join(ROOT, 'demo/PROMPTS.md'), 'utf8');
   const recording = readFileSync(join(ROOT, 'demo/RECORDING.md'), 'utf8');
   const script = readFileSync(join(ROOT, 'demo/SCRIPT.md'), 'utf8');
-  assert.match(prompts, /Demo cold-read card/);
-  assert.match(prompts, /Line-by-line/);
-  assert.match(prompts, /\*\*SAY\*\*/);
-  assert.match(prompts, /\*\*PASTE\*\*/);
-  assert.match(prompts, /\*\*SEE\*\*/);
+  assert.match(prompts, /Demo teleprompter/);
+  assert.match(prompts, /Teleprompter-only/);
+  assert.match(prompts, /\*\*SAY:\*\*/);
+  assert.match(prompts, /I built claude-recovery for when a Claude Code attempt is mixed/);
+  assert.match(prompts, /AuthProvider is just a login checker/);
   assert.match(prompts, /FIXTURE/);
   assert.match(prompts, /WORKTREE/);
   assert.match(prompts, /\/claude-recovery:recover/);
@@ -107,6 +107,7 @@ test('PROMPTS.md is the cold-read card with paste prompts and commands', () => {
   assert.match(prompts, /Run approve and finalize as separate steps/i);
   assert.match(prompts, /Before editing, summarize the implementation boundary/);
   assert.match(prompts, /git diff --name-only/);
+  assert.match(prompts, /Same boundary, clean tree, useful test kept/);
   assert.match(recording, /demo\/PROMPTS\.md/);
   assert.match(script, /demo\/PROMPTS\.md/);
 });
@@ -118,7 +119,7 @@ test('npm run demo prints paste/type sequence', () => {
   });
   assert.equal(result.status, 0, result.stderr);
   const out = `${result.stdout ?? ''}${result.stderr ?? ''}`;
-  assert.match(out, /Cold-read card: demo\/PROMPTS\.md/);
+  assert.match(out, /Teleprompter: demo\/PROMPTS\.md|Full teleprompter: demo\/PROMPTS\.md/);
   assert.match(out, /\/claude-recovery:recover/);
   assert.match(out, /Reject the AuthProvider interface change and ApiClient migration/);
   assert.match(out, /Run approve and finalize as separate steps/);
