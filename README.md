@@ -31,6 +31,10 @@ This is **not** general session recovery. It does not detect that an attempt is 
 
 ## 60-second demo
 
+[![60-second demo](https://cdn.loom.com/sessions/thumbnails/df1a5b01fd0f4d26ac6cb23b86e0cc9e-with-play.gif)](https://www.loom.com/share/df1a5b01fd0f4d26ac6cb23b86e0cc9e)
+
+Watch on [Loom](https://www.loom.com/share/df1a5b01fd0f4d26ac6cb23b86e0cc9e).
+
 ```text
 Failing compat test + git diff
 → /claude-recovery:recover
@@ -39,7 +43,7 @@ Failing compat test + git diff
 → clean worktree + fresh session with boundary
 ```
 
-Record with **Loom**. Teleprompter: [`demo/PROMPTS.md`](demo/PROMPTS.md) · Cut notes: [`demo/RECORDING.md`](demo/RECORDING.md)
+Teleprompter: [`demo/PROMPTS.md`](demo/PROMPTS.md) · Cut notes: [`demo/RECORDING.md`](demo/RECORDING.md)
 
 ## Try the fixture
 
