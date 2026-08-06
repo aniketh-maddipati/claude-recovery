@@ -2,6 +2,13 @@
 
 All notable changes to **claude-recovery** are documented here.
 
+## [Unreleased]
+
+### Added
+
+- `package.json` with local npm scripts (`npm test`, `npm run demo`, `npm run sandbox`, etc.)
+- Zero runtime dependencies — Node.js built-ins only; no `npm install` required
+
 ## [0.1.1] - 2026-07-31
 
 ### Added
