@@ -91,8 +91,8 @@ test('PROMPTS.md and RECORDING.md match the implemented flow', () => {
   for (const name of listDemoScenarios()) {
     assert.match(prompts, new RegExp(name));
   }
-  assert.match(recording, /0–8s|0-8s/);
-  assert.match(recording, /46–60s|46-60s|30–60s|30-60s/);
+  assert.match(recording, /45–75s|45-75s/);
+  assert.match(recording, /What viewers should see/i);
   assert.match(prompts, /Before editing, summarize the implementation boundary/);
   assert.match(recording, /Before editing, summarize the implementation boundary/);
   assert.match(prompts, /Run approve and finalize as separate steps/i);
@@ -102,6 +102,9 @@ test('PROMPTS.md and RECORDING.md match the implemented flow', () => {
   assert.match(recording, /The implementation direction is rejected\. The test is useful\./);
   assert.match(script, /YOU SAY/);
   assert.match(script, /YOU PASTE/);
+  assert.match(script, /VIEWERS SHOULD SEE/);
+  assert.match(script, /Scenario primer/);
+  assert.match(script, /Viewer checklist/);
   assert.match(script, /\/claude-recovery:recover/);
   assert.match(script, /verifyRequest/);
   assert.match(script, /ApiClient/);
@@ -109,9 +112,10 @@ test('PROMPTS.md and RECORDING.md match the implemented flow', () => {
   assert.match(script, /Reject the AuthProvider interface change and ApiClient migration/);
   assert.match(script, /Before editing, summarize the implementation boundary/);
   assert.match(script, /Cold-read card/);
-  assert.match(script, /I built claude-recovery/);
-  assert.match(script, /Here’s that case\. AuthProvider was rewritten to verifyRequest/);
-  assert.match(script, /That’s the handoff\. Stopping here\./);
+  assert.match(script, /I built claude-recovery for a recovery case rewind/);
+  assert.match(script, /This is a small auth-service demo/);
+  assert.match(script, /Same boundary, clean tree, useful test kept/);
+  assert.match(script, /authenticate\(token\)/);
   assert.match(script, /Loom/);
   assert.match(script, /asciinema/);
   assert.match(script, /demo\/record\.sh|npm run demo:record/);
@@ -133,6 +137,9 @@ test('npm run demo prints the complete primary sequence', () => {
   assert.match(out, /Before editing, summarize the implementation boundary/);
   assert.match(out, /Do not edit anything\. Stop after reporting/);
   assert.match(out, /demo:record|demo\/record\.sh/);
+  assert.match(out, /Scenario \(tell viewers\)/);
+  assert.match(out, /verifyRequest/);
+  assert.match(out, /demo\/SCRIPT\.md/);
   assert.match(out, /Loom/);
 });
 

@@ -39,7 +39,7 @@ Failing compat test + git diff
 → clean worktree + fresh session with boundary
 ```
 
-Record with **Loom** (not asciinema). Cut (30–60s): [`demo/RECORDING.md`](demo/RECORDING.md) · Teleprompter: [`demo/SCRIPT.md`](demo/SCRIPT.md)
+Record with **Loom** (not asciinema). Cut (45–75s): [`demo/RECORDING.md`](demo/RECORDING.md) · Teleprompter + viewer cues: [`demo/SCRIPT.md`](demo/SCRIPT.md)
 
 ## Try the fixture
 

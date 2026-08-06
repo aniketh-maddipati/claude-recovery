@@ -2,7 +2,7 @@
 
 Primary HN scenario: **auth-service**. Paste these blocks in order during a Loom recording.
 
-For word-for-word narration (30–60s teleprompter), use [`demo/SCRIPT.md`](SCRIPT.md).
+For word-for-word narration with scenario context and viewer cues (45–75s teleprompter), use [`demo/SCRIPT.md`](SCRIPT.md).
 
 **Setup:**
 

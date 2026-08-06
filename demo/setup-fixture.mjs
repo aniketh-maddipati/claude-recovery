@@ -110,6 +110,14 @@ Deterministic mixed-attempt fixture (not live Claude misbehavior).
 Starting state: Git diff present, useful test present, commands.jsonl absent,
 decision.json absent, no recovery manifest / approved pending contract.
 
+Scenario (tell viewers): small auth-service repo. Task was add authentication
+without changing AuthProvider.authenticate(token) or migrating ApiClient.
+Attempt rewrote provider to verifyRequest, migrated api-client, added compat test
+that still expects authenticate — test fails on purpose. Recovery keeps test,
+restores rejected sources, hands next session a Recovery Contract.
+
+Full word-for-word script + viewer cues: demo/SCRIPT.md
+
 ────────────────────────────────────────────────────────────────
 Complete interactive sequence (paste in order)
 ────────────────────────────────────────────────────────────────
@@ -155,8 +163,8 @@ Expected fresh-session themes: preserve AuthProvider.authenticate(token);
 no ApiClient migration; use an adapter; run the compatibility test.
 
 Recording setup (one script): npm run demo:record   # or ./demo/record.sh
-Speaking script (word-for-word, 30–60s Loom): demo/SCRIPT.md
-Recording cut (30–60s): demo/RECORDING.md
+Speaking script (word-for-word + viewer cues): demo/SCRIPT.md
+Recording cut (45–75s): demo/RECORDING.md
 Copy-paste prompts: demo/PROMPTS.md
 Use Loom, not asciinema. Preflight is off-camera.`);
 }

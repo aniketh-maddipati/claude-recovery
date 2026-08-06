@@ -61,7 +61,7 @@ Checklist before you hit Record:
   $LAUNCH
 
 3) Follow demo/SCRIPT.md top to bottom — say only the quoted lines,
-   paste only the marked blocks, stay silent during waits.
+   paste only the marked blocks, use VIEWERS SHOULD SEE to know when to pause.
 4) After "That's the handoff. Stopping here." — stop Loom.
 5) Trim model waits; add a small "waits trimmed" note.
 6) Overlays (only these three), in order:
