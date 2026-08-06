@@ -1,132 +1,117 @@
 # claude-recovery
 
-Developer-invoked recovery for untrustworthy Claude Code attempts. Preserves chosen code, decisions, and evidence in a clean Git worktree.
+**Version:** 0.1.2 · **License:** MIT · **Claude Code:** 2.1.x
 
-**Version:** 0.1.1 · **License:** MIT · **Claude Code:** 2.1.x
+A Claude attempt changed two public interfaces, but produced a useful
+compatibility test and an edge-case finding.
 
-## Plugin structure
+Rewind would lose later artifacts.
+Branching would preserve the rejected direction and context.
+claude-recovery creates a clean worktree containing only the approved
+test, plus an explicit contract for the next attempt.
 
-```
-claude-recovery/
-├── package.json             # Local npm scripts (zero runtime dependencies)
-├── .claude-plugin/
-│   └── plugin.json          # Plugin manifest (name → skill namespace)
-├── skills/
-│   └── recover/
-│       └── SKILL.md         # /claude-recovery:recover
-├── hooks/
-│   └── hooks.json           # Evidence capture + SessionStart (plugin hooks)
-├── scripts/
-│   ├── recovery.mjs         # Recovery CLI
-│   ├── session-hook.mjs     # Hook handler (shared by plugin + native hooks)
-│   ├── setup-hooks.mjs      # One-time native hook install
-│   └── run-manual-test.mjs  # Mechanical + optional Claude CLI tests
-└── fixtures/                # Scenario fixtures for e2e tests
-```
+## What it does
 
-Component directories live at the **plugin root**, not inside `.claude-plugin/`.
+Developer-invoked selective salvage for a mixed Claude Code attempt:
 
-## Requirements
+1. You invoke `/claude-recovery:recover`
+2. You explicitly choose what to keep and discard
+3. You review a Recovery Contract and approve it
+4. The plugin creates a clean Git worktree with only the selected changes
+5. A fresh Claude Code session receives the approved contract via SessionStart
 
-- Claude Code CLI (tested on 2.1.x) — only for interactive use and optional live tests
-- Git — required for recovery operations and test fixtures
-- Node.js 22+ — for helper scripts and tests (`node --version`)
+This is **not** general session recovery. It does not detect that an attempt is wrong, recover hidden reasoning, invoke `/clear`, or launch Claude for you.
 
-No `npm install` is required. This repo has **zero npm dependencies**; scripts use Node.js built-ins only.
+## Compared with Claude Code built-ins
 
-### Dependencies
+Claude’s built-ins may change. Conservative comparison for whole-file selective salvage:
 
-| Kind | Required? | Notes |
-|------|-----------|-------|
-| Node.js 22+ | Yes | `npm run check:node` verifies version |
-| Git | Yes | Recovery, fixtures, and worktrees |
-| Claude Code CLI | Interactive only | Not needed for `npm test` |
-| `npm install` | No | No `dependencies` or `devDependencies` in `package.json` |
+| Mechanism            | What it preserves                     | Selective artifacts | Clean continuation contract |
+| -------------------- | ------------------------------------- | ------------------: | --------------------------: |
+| `/rewind`            | Earlier checkpoint                    |                  No |                          No |
+| `/branch` or `/fork` | Conversation branch                   |                  No |                          No |
+| native worktree      | Filesystem isolation                  |                  No |                          No |
+| `claude-recovery`    | Developer-selected files and evidence |  Yes, whole-file v1 |                         Yes |
 
-External tools (`git`, `claude`) are system installs, not npm packages — nothing to lock, audit, or update in this repo.
-
-## Local commands
-
-From the plugin root after cloning:
-
-```bash
-npm run check:node    # verify Node.js 22+
-npm test              # full CI-equivalent test suite (no Claude auth)
-npm run demo          # prepare disposable demo fixture + print launch command
-npm run sandbox       # reset interactive auth-service sandbox under .sandbox/
-npm run setup-hooks   # one-time native SessionStart hook install
-npm run setup-hooks:check
-```
-
-| Script | Purpose |
-|--------|---------|
-| `npm test` | Unit, demo, mechanical e2e, and prompt-eval harness (scorer only) |
-| `npm run test:unit` | `recovery`, `setup-hooks`, and `demo` tests |
-| `npm run test:mechanical` | Full recovery pipeline smoke (~2s, no auth) |
-| `npm run test:prompt-evals` | Prompt eval scorer only (`CLAUDE_RECOVERY_EVAL_SKIP=1`) |
-| `npm run test:claude` | Live skill checks (requires authenticated Claude CLI) |
-| `npm run test:eval` | Live prompt evals (requires authenticated Claude CLI) |
-| `npm run demo` | Same as `./demo/run-demo.sh` — builds `.demo/auth-service` |
-| `npm run demo:config` | Pre-built **config-toggle** fixture (simplest Loom story) |
-| `npm run demo:live -- config-toggle` | Clean codebase — create the mistake live on camera |
-| `npm run demo:prompts` | Print copy-paste prompts (`demo/PROMPTS.md`) |
-| `npm run sandbox` | Reset `.sandbox/auth-service` with bad attempt for manual `/recover` |
-| `npm run sandbox:prompts` | Print copy-paste prompts for sandbox testing |
-| `npm run recovery -- <cmd>` | Pass-through to `scripts/recovery.mjs` (e.g. `npm run recovery -- inspect`) |
-| `npm run setup-hooks` | Install native hooks into `~/.claude/settings.json` |
-| `npm run setup-hooks:check` | Verify native hooks are installed |
-
-Shell equivalents still work: `./demo/run-demo.sh`, `node scripts/recovery.mjs …`, etc.
-
-## Install
-
-Load the plugin:
+## Quick start
 
 ```bash
 git clone https://github.com/aniketh-maddipati/claude-recovery.git
 claude --plugin-dir /path/to/claude-recovery
 ```
 
-One-time setup for reliable contract injection (recommended):
+1. In a repo with a mixed attempt, run `/claude-recovery:recover`
+2. Answer keep / reject / change, review the preview, then explicitly approve
+3. Manually launch the printed interactive command in the new worktree
 
 ```bash
-npm run setup-hooks
-# or: node /path/to/claude-recovery/scripts/setup-hooks.mjs
+cd '<worktree>' && claude --plugin-dir '/path/to/claude-recovery'
 ```
 
-Verify native hooks:
+Plugin-scoped SessionStart injects the approved contract. You do not need to install native hooks for the normal path.
+
+### Marketplace install (optional)
+
+This repository includes `.claude-plugin/marketplace.json` for a single-plugin marketplace rooted at the repo:
+
+```text
+/plugin marketplace add aniketh-maddipati/claude-recovery
+/plugin install claude-recovery@claude-recovery
+```
+
+If marketplace install fails validation in your Claude Code build, use the local `--plugin-dir` path above. Do not assume marketplace install works until your CLI accepts the manifest.
+
+## Demo
 
 ```bash
-npm run setup-hooks:check
-# or: node /path/to/claude-recovery/scripts/setup-hooks.mjs --check
+npm run demo:preflight   # Node 22+, git, claude, honest fixture checks
+npm run demo             # deterministic auth-service mixed-attempt fixture
 ```
 
-## Skill: `/claude-recovery:recover`
+The demo fixture is a **deterministic mixed-attempt overlay** (clean base + rejected changes + useful compatibility test). It is not proof that Claude independently violated an instruction. `decision.json` and `commands.jsonl` are intentionally absent until the real session captures them.
 
-| | |
-|---|---|
-| **Invoke** | `/claude-recovery:recover` |
-| **Namespace** | `claude-recovery` (from `plugin.json` → `name`) |
-| **Skill folder** | `skills/recover/` |
-| **Model invocation** | Disabled (`disable-model-invocation: true`) — developer must invoke explicitly |
-| **Allowed tools** | Bash, Read, Write, Edit, Glob, Grep |
+Recording guide: [`demo/RECORDING.md`](demo/RECORDING.md) · Prompts: [`demo/PROMPTS.md`](demo/PROMPTS.md)
 
-Use when an attempt feels untrustworthy and you want to salvage selected work in a clean Git worktree. The skill does **not** auto-detect failure or rewind sessions — you decide what to keep, reject, or change.
+```bash
+npm run demo:receipt     # print compact receipt after finalize
+```
 
-### Skill flow (summary)
+## Honest limitations
 
-1. **Inspect** — `capture` + `inspect` local evidence (Git diff, Bash output, prompts)
-2. **Decide** — answer: *What should the next attempt keep, reject, or change?*
-3. **Preview** — write `decision.json`, run `preview`, review Recovery Contract
-4. **Approve** — explicit approval required before any changes
-5. **Finalize** — `finalize` creates worktree, applies selected patches, seeds contract
-6. **Launch** — run the printed command in the recovery worktree yourself
+- Decisions are yours — the plugin does not judge semantic correctness
+- No chain-of-thought / hidden reasoning recovery
+- Whole-file patches only (v1)
+- Bash-only command evidence
+- You launch Claude in the recovery worktree yourself
+- Does not supersede `/rewind`, `/branch`, `/fork`, or native worktrees
 
-Full skill instructions: [`skills/recover/SKILL.md`](skills/recover/SKILL.md)
+Full scope: [LIMITATIONS.md](LIMITATIONS.md)
 
-## Typical workflow
+## Security and privacy
 
-In your project (during `/recover`, or run the CLI directly):
+Recovery artifacts are written **locally** under `.claude/recovery/`.
+
+Captured data may include:
+
+| Artifact | Contents |
+|----------|----------|
+| `prompts.jsonl` | Submitted prompts |
+| `commands.jsonl` | Bash commands + stdout/stderr |
+| `evidence.json` | Git SHA, status, diff |
+| `decision.json` | Your keep/reject/change answer |
+| `recovery-contract.md` / `pending-contract.json` | Approved handoff text |
+
+**Warning:** prompts and Bash output may contain secrets, tokens, or personal data. Review before sharing a worktree or screen recording.
+
+Remove local recovery artifacts when finished:
+
+```bash
+rm -rf .claude/recovery .claude/recovery-worktrees
+```
+
+Only **approved** contracts are injected at SessionStart. Unapproved or malformed pending contracts are ignored and must not crash Claude.
+
+## Typical CLI workflow
 
 ```bash
 PLUGIN=/path/to/claude-recovery
@@ -134,28 +119,93 @@ PLUGIN=/path/to/claude-recovery
 node $PLUGIN/scripts/recovery.mjs capture
 node $PLUGIN/scripts/recovery.mjs inspect
 
-# after you answer keep/reject/change and approve
+# after you answer keep/reject/change
+node $PLUGIN/scripts/recovery.mjs preview --decision-file .claude/recovery/decision.json
+# explicit approval required
+node $PLUGIN/scripts/recovery.mjs approve --decision-file .claude/recovery/decision.json
 node $PLUGIN/scripts/recovery.mjs finalize \
   --decision-file .claude/recovery/decision.json \
   --name recovery-$(date +%s)
 
-node $PLUGIN/scripts/recovery.mjs verify-boundaries \
-  --manifest .claude/recovery/recovery-manifest.json
-
-node $PLUGIN/scripts/recovery.mjs launch-instructions \
+node $PLUGIN/scripts/recovery.mjs receipt \
   --manifest .claude/recovery/recovery-manifest.json
 ```
 
-Run the **`recommendedLaunchCommand`** from `launch-instructions` (embeds `recovery-contract.md` via `-p`):
+Lifecycle (mechanically enforced):
+
+```text
+capture → inspect → write decision → preview → approve → finalize → verify → manual interactive launch
+```
+
+Finalize refuses if `decision.json` or the recovery plan changed after approval.
+
+### Launch commands
+
+| Field | Meaning |
+|-------|---------|
+| `recommendedLaunchCommand` | **Interactive** (primary). No `-p`. Developer runs manually. |
+| `recommendedLaunchCommandHeadless` | **Headless / non-interactive** fallback using `-p` |
+| manual paste | Last resort: paste `recovery-contract.md` |
 
 ```bash
-cd /path/to/recovery-worktree && claude --plugin-dir /path/to/claude-recovery \
+# interactive (primary)
+cd '<worktree>' && claude --plugin-dir '<plugin-root>'
+
+# headless / non-interactive fallback
+cd '<worktree>' && claude --plugin-dir '<plugin-root>' \
   -p "$(cat .claude/recovery/recovery-contract.md)"
 ```
 
-If you ran `setup-hooks.mjs`, you can also use **`recommendedLaunchCommandInteractive`** (no `-p`; SessionStart injects the contract).
+### SessionStart handoff
 
-v1 applies **whole-file patches only** — no hunk picker.
+1. **Primary:** plugin-scoped SessionStart hook (`hooks/hooks.json`)
+2. **Optional fallback:** `npm run setup-hooks` → native `~/.claude/settings.json`
+3. **Headless `-p`:** deterministic non-interactive fallback
+4. **Manual paste:** last resort
+
+Do not automatically modify `~/.claude/settings.json` unless you explicitly run the optional installer.
+
+## Requirements
+
+- Claude Code CLI (tested on 2.1.x) — interactive use and optional live tests
+- Git — recovery operations and fixtures
+- Node.js 22+ — helper scripts and tests
+
+No `npm install` is required. Zero runtime/development npm dependencies; Node built-ins only.
+
+## Local commands
+
+```bash
+npm run check:node
+npm test
+npm run demo
+npm run demo:preflight
+npm run demo:receipt
+npm run sandbox
+npm run setup-hooks          # optional native-hook fallback
+npm run setup-hooks:check
+```
+
+| Script | Purpose |
+|--------|---------|
+| `npm test` | Unit, demo, mechanical e2e, prompt-eval harness |
+| `npm run demo` | Build `.demo/auth-service` deterministic fixture |
+| `npm run demo:preflight` | Machine checks before recording |
+| `npm run demo:receipt` | Compact human-readable finalize receipt |
+| `npm run sandbox` | Reset `.sandbox/auth-service` for manual `/recover` |
+| `npm run setup-hooks` | Optional native SessionStart fallback |
+
+## Skill: `/claude-recovery:recover`
+
+| | |
+|---|---|
+| **Invoke** | `/claude-recovery:recover` |
+| **Namespace** | `claude-recovery` |
+| **Model invocation** | Disabled — developer must invoke explicitly |
+
+Flow: capture → inspect → one keep/reject/change question → decision → preview → explicit approve → finalize → compact receipt → manual interactive launch.
+
+Full instructions: [`skills/recover/SKILL.md`](skills/recover/SKILL.md)
 
 ## Helper commands
 
@@ -163,153 +213,91 @@ v1 applies **whole-file patches only** — no hunk picker.
 |---------|---------|
 | `capture` | Snapshot Git state and file patches |
 | `inspect` | Compact labeled attempt view |
-| `preview --decision-file <path>` | Build Recovery Contract without applying |
-| `finalize --decision-file <path> [--name <name>]` | Approve, create worktree, apply patches, seed contract |
+| `preview --decision-file <path>` | Unapproved plan + digests (no worktree) |
+| `approve --decision-file <path>` | Mark exact decision/plan approved |
+| `finalize --decision-file <path> [--name <name>]` | Create worktree, apply frozen patches, verify boundaries |
+| `receipt --manifest <path>` | Compact human-readable receipt |
 | `verify-boundaries --manifest <path>` | Compare boundary files to base SHA |
-| `launch-instructions --manifest <path>` | Print launch commands |
-| `setup-hooks.mjs [--check\|--dry-run]` | Install or verify native hooks in `~/.claude/settings.json` |
+| `launch-instructions --manifest <path>` | Print interactive + headless launch commands |
+| `setup-hooks.mjs` | Optional native-hook fallback |
 
 ## Recovery artifacts
 
-All files stay local under `.claude/recovery/` — nothing is sent remotely.
+All files stay local under `.claude/recovery/`.
 
 | File | Role |
 |------|------|
-| `evidence.json` | Captured Git state at inspect time |
+| `evidence.json` | Captured Git state |
 | `decision.json` | Your keep/reject/change answer |
-| `recovery-contract.md` | Human-readable Recovery Contract (Keep / Discard / Next) |
-| `recovery-manifest.json` | Machine-readable handoff (patches, base SHA, worktree path) |
-| `pending-contract.json` | Approved contract for SessionStart injection |
-| `boundary-verification.json` | Output of `verify-boundaries` |
+| `recovery-contract.md` | Human-readable Recovery Contract |
+| `recovery-manifest.json` | Machine-readable handoff + digests |
+| `pending-contract.json` | Approved contract for SessionStart |
+| `boundary-verification.json` | Finalize boundary report |
 | `injection-audit.jsonl` | SessionStart injection events |
-| `patch-application-errors.json` | Patch failures (original repo untouched) |
+| `patch-application-errors.json` | Patch failures (source tree untouched) |
+
+## Plugin structure
+
+```
+claude-recovery/
+├── package.json
+├── .claude-plugin/
+│   ├── plugin.json
+│   └── marketplace.json
+├── skills/recover/SKILL.md
+├── hooks/hooks.json
+├── scripts/recovery.mjs
+├── scripts/session-hook.mjs
+├── scripts/setup-hooks.mjs      # optional native fallback
+├── demo/
+└── fixtures/
+```
+
+Component directories live at the **plugin root**, not inside `.claude-plugin/`.
 
 ## Debugging
 
-### Quick checks
-
 ```bash
-# Plugin loads?
 claude --plugin-dir /path/to/claude-recovery
-/help   # look for claude-recovery:recover under Custom commands
+/help   # look for claude-recovery:recover
 
-# Native hooks installed?
-node /path/to/claude-recovery/scripts/setup-hooks.mjs --check
-
-# Mechanical recovery pipeline (~2s, no Claude auth)
 node /path/to/claude-recovery/scripts/run-manual-test.mjs
-
-# Inspect current attempt manually
 node /path/to/claude-recovery/scripts/recovery.mjs capture
 node /path/to/claude-recovery/scripts/recovery.mjs inspect | jq .
 ```
 
 ### Contract not visible in new session?
 
-1. Confirm you launched from the **recovery worktree** (not the source repo):
-   ```bash
-   ls .claude/recovery/pending-contract.json   # should exist and "approved": true
-   ```
-2. Check injection ran:
-   ```bash
-   cat .claude/recovery/injection-audit.jsonl
-   # "injectedAt" should be set on pending-contract.json after SessionStart
-   ```
-3. If plugin hooks silently fail ([#16538](https://github.com/anthropics/claude-code/issues/16538)):
-   ```bash
-   node /path/to/claude-recovery/scripts/setup-hooks.mjs
-   ```
-4. **Fallback:** use `recommendedLaunchCommand` (embeds contract via `-p`), or paste `recovery-contract.md` manually.
+1. Confirm you launched from the **recovery worktree**
+2. Check `.claude/recovery/pending-contract.json` has `"approved": true`
+3. Check `injection-audit.jsonl` for a SessionStart entry
+4. Optional: `node scripts/setup-hooks.mjs` (native fallback)
+5. Headless fallback: `recommendedLaunchCommandHeadless` (uses `-p`)
+6. Last resort: paste `recovery-contract.md`
 
-### Common failures
-
-| Symptom | Check | Fix |
-|---------|-------|-----|
-| `requires a Git repository with at least one commit` | `git rev-parse HEAD` | `git init && git commit --allow-empty -m init` |
-| `Worktree path already exists` | `.claude/recovery-worktrees/` | Use a new `--name` or remove the old worktree |
-| `boundary verification failed` | `boundary-verification.json` | Re-run `inspect`; confirm discarded files match base SHA |
-| `Patch application failed` | `patch-application-errors.json` | Source tree is safe; inspect patch files under `.claude/recovery/patches/` |
-| Skill not listed | Plugin path | Restart Claude with `--plugin-dir`; confirm `skills/recover/SKILL.md` exists |
-| `--claude` test fails | Auth + debug | See environment variables below |
-
-### Scripted / headless debugging
-
-For `run-manual-test.mjs --claude` or `--eval`:
-
-```bash
-CLAUDE_RECOVERY_DEBUG=1 node scripts/run-manual-test.mjs --claude
-# verbose claude -p output; errors also written to:
-#   .claude/recovery/last-<stage>-error.txt
-
-CLAUDE_RECOVERY_PLUGIN_DIR=/path/to/claude-recovery node scripts/run-manual-test.mjs --claude
-CLAUDE_RECOVERY_EVAL_SKIP=1 node --test tests/prompt-evals.test.mjs   # scorer only, no auth
-CLAUDE_RECOVERY_EVAL_RECORD=1 node scripts/run-manual-test.mjs --eval  # record responses
-CLAUDE_RECOVERY_EVAL_REPLAY=1 node scripts/run-manual-test.mjs --eval  # replay recordings
-```
+### Environment variables
 
 | Variable | Purpose |
 |----------|---------|
-| `CLAUDE_RECOVERY_DEBUG=1` | Pass `--debug` to `claude -p` |
-| `CLAUDE_RECOVERY_PLUGIN_DIR` | Override plugin root path in scripts |
-| `CLAUDE_RECOVERY_SETTINGS_PATH` | Override settings path for `setup-hooks` tests |
+| `CLAUDE_RECOVERY_DEBUG=1` | Pass `--debug` to `claude -p` in scripted tests |
+| `CLAUDE_RECOVERY_PLUGIN_DIR` | Override plugin root path |
+| `CLAUDE_RECOVERY_SETTINGS_PATH` | Override settings path for setup-hooks tests |
 | `CLAUDE_RECOVERY_EVAL_SKIP=1` | Skip live prompt evals in CI |
-| `CLAUDE_RECOVERY_EVAL_TIMEOUT_MS` | Timeout for headless Claude calls (default 180000) |
-
-### Try the sandbox scenario
-
-```bash
-npm run sandbox
-cd .sandbox/auth-service
-claude --plugin-dir /path/to/claude-recovery
-# invoke: /claude-recovery:recover
-
-npm run sandbox:prompts   # copy-paste prompts from prompts.json
-```
-
-Golden scenario: `fixtures/auth-service/` (bad API migration; keep compat test; reject client changes).
-
-### 30-second demo recording
-
-```bash
-npm run demo
-# or: ./demo/run-demo.sh
-```
-
-**Copy-paste prompts and Loom-friendly scenarios:** [`demo/PROMPTS.md`](demo/PROMPTS.md)
-
-Follow the printed `claude --plugin-dir` command and the shot list in [`demo/RECORDING.md`](demo/RECORDING.md).
 
 ## Tests
-
-CI runs on every push:
 
 ```bash
 npm test
 ```
 
-Equivalent manual invocations:
-
 ```bash
-node --test tests/recovery.test.mjs tests/setup-hooks.test.mjs tests/demo.test.mjs
+node --test tests/recovery.test.mjs
+node --test tests/setup-hooks.test.mjs
+node --test tests/demo.test.mjs
 node scripts/run-manual-test.mjs
 CLAUDE_RECOVERY_EVAL_SKIP=1 node --test tests/prompt-evals.test.mjs
 ```
 
-Optional live skill checks (Claude CLI + auth):
-
-```bash
-npm run test:eval
-npm run test:claude
-```
-
-Add scenarios under `fixtures/<name>/` with `scenario.json` and `decision.json`.
-
-## Limitations
-
-Not automatic semantic recovery. You launch Claude in the worktree yourself. Whole-file patches only. Bash-only command evidence.
-
-Full scope: [LIMITATIONS.md](LIMITATIONS.md) · Changes: [CHANGELOG.md](CHANGELOG.md)
-
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE). · Changes: [CHANGELOG.md](CHANGELOG.md)

@@ -64,9 +64,10 @@ function printLiveInstructions(result) {
 Live demo fixture ready (${result.scenario}): ${result.fixture}
 ${result.loomTitle} — ${result.oneLiner}
 
-This is a CLEAN codebase. Paste prompts from demo/PROMPTS.md to create the bad attempt on camera.
+This is a CLEAN codebase for optional live rehearsal.
+Prefer the deterministic fixture (\`npm run demo\`) for the primary HN recording.
 
-Run Claude Code:
+Run Claude Code interactively:
 
   ${result.launchCommand}
 
@@ -74,11 +75,11 @@ Then paste (step 2 — initial task):
 
 ${live.initialTask}
 
-If Claude does not break the boundary, paste (step 3 — bad attempt nudge):
+Optional rehearsal nudge (explicit demo setup — do not imply natural misbehavior):
 
 ${live.badAttemptNudge}
 
-Then run in terminal (step 4 — evidence):
+Then run evidence through Bash so real PostToolUse can capture commands.jsonl:
 
 ${live.evidenceCommands.map((c) => `  ${c}`).join('\n')}
 

@@ -1,263 +1,139 @@
 # Demo prompts (copy-paste)
 
-Use this file during Loom recordings. Every block below is ready to paste into Claude Code or your terminal.
+Use this file during Loom recordings. Every block matches the implemented recover → preview → approve → finalize flow.
 
-**Setup (pick one):**
+**Setup:**
 
 ```bash
-npm run demo                              # auth-service (default, best for 30-sec cut)
-npm run demo:config                       # config-toggle (simplest story)
-npm run demo:live -- auth-service         # clean codebase — you create the mistake live
-npm run demo:live -- config-toggle
+npm run demo:preflight
+npm run demo                              # auth-service (primary HN demo)
+npm run demo:config                       # config-toggle (simpler story)
 ```
 
-Then run the printed `cd ... && claude --plugin-dir ...` command.
+Then run the printed interactive `cd ... && claude --plugin-dir ...` command.
+
+The fixture is a **deterministic mixed-attempt overlay**. It is not live proof of independent instruction violation. `decision.json` and `commands.jsonl` start absent.
 
 ---
 
-## Which scenario should I use?
+## Primary scenario — auth-service (60–75 sec)
 
-| Scenario | Best for | One-line story | The mistake you'll show |
-|----------|----------|----------------|-------------------------|
-| **config-toggle** | First Loom, non-technical audience | "Add feature flags" | `getConfig()` renamed to `loadSettings()` |
-| **auth-service** | 30-sec silent demo, API boundaries | "Add auth without breaking clients" | `authenticate()` renamed to `verifyRequest()` |
+### Story (say this on camera)
 
-**Recommendation:** Start with **config-toggle** in Loom — one file changes, one obvious rename, easy to read on screen.
+> This attempt changed two public interfaces, but also produced a useful compatibility test and an expired-token finding. Recovery keeps only what we approve.
+
+### Show the problem
+
+```bash
+git diff --stat
+node --test tests/auth-compat.test.mjs
+```
+
+Run the failing test through Claude’s Bash tool when hooks are loaded so real PostToolUse evidence is captured.
+
+### Recovery flow — paste in order
+
+**1. Start recovery**
+
+```
+/claude-recovery:recover
+```
+
+**2. When asked what to keep / reject / change**
+
+```
+Keep the compatibility test and expired-token finding.
+Reject the AuthProvider and client migrations.
+Start clean and use an adapter.
+```
+
+**3. When the contract preview looks right**
+
+```
+Approved. Run approve, then finalize, then show the compact receipt and interactive launch command.
+```
+
+**4. After finalize — show receipt (or ask Claude to run it)**
+
+```bash
+node /path/to/claude-recovery/scripts/recovery.mjs receipt \
+  --manifest .claude/recovery/recovery-manifest.json
+```
+
+**5. In the new worktree (you start this manually — interactive, no `-p`)**
+
+```
+Summarize the implementation boundary before editing.
+```
+
+Expected themes in the reply:
+
+- preserve `AuthProvider.authenticate(token)`
+- do not migrate `ApiClient`
+- use an adapter
+- run `tests/auth-compat.test.mjs`
 
 ---
 
-## Scenario A — config-toggle (simplest)
+## Secondary scenario — config-toggle
 
-### The story (say this on camera)
-
-> Claude was asked to add feature flags. Your rule was: don't rename `getConfig()`. Claude renamed it anyway. Recovery keeps the smoke test and restarts from a clean base.
-
-### Pre-built fixture
+### Setup
 
 ```bash
 npm run demo:config
 ```
 
-### Terminal commands to show the problem
-
-```bash
-cat .claude/recovery/original-outcome.json
-git diff --stat HEAD
-git diff HEAD -- src/config.mjs
-tail -n 2 .claude/recovery/commands.jsonl
-```
-
-### Recovery flow — paste in order
-
-**1. Start recovery**
-
-```
-/claude-recovery:recover
-```
-
-**2. When asked what to keep / reject / change**
+### Decision
 
 ```
 Keep the smoke test and default-false finding. Reject the getConfig rename. Fresh session from clean base.
 ```
 
-**3. When the contract preview looks right**
+### Approve
 
 ```
-Approved. Run finalize and print the launch command only.
+Approved. Run approve, then finalize, then show the compact receipt and interactive launch command.
 ```
 
-**4. In the new worktree session (you start this manually)**
+### Fresh session
 
 ```
-Use the Recovery Contract. Add a feature flag reader without renaming getConfig. Run: node --test tests/config-smoke.test.mjs
+Summarize the implementation boundary before editing.
 ```
-
-### Loom captions
-
-| Moment | Caption |
-|--------|---------|
-| Show diff | **getConfig was renamed despite a no-rename boundary.** |
-| Show evidence | **The smoke test caught the breaking change.** |
-| Paste decision | **Keep the test. Reject the rename.** |
-| Show contract | **Clean base + wrapper approach + required verification.** |
-| Show finalize | **Only the approved smoke test carries forward.** |
-| Fresh session | **Fresh context. Same boundary. No reconstruction.** |
 
 ---
 
-## Scenario B — auth-service (30-sec demo)
+## Live simulation (optional)
 
-### The story (say this on camera)
-
-> Claude was asked to add authentication without changing the public API or forcing a client migration. It rewrote the interface anyway. Recovery salvages the compatibility test and expired-token finding.
-
-### Pre-built fixture
+Use only when you want to create the rejected attempt on camera. Prefer the deterministic fixture for the primary HN cut.
 
 ```bash
-npm run demo
+npm run demo:live -- auth-service
 ```
 
-### Terminal commands to show the problem
+Paste the initial task from the printed instructions. If you need the rejected overlay shape for rehearsal, the printed nudge is **explicit demo setup** — do not imply it happened without instruction.
 
-```bash
-cat .claude/recovery/original-outcome.json
-git diff --stat HEAD
-git diff HEAD -- src/auth/provider.mjs src/clients/api-client.mjs
-tail -n 2 .claude/recovery/commands.jsonl
-```
-
-### Recovery flow — paste in order
-
-**1. Start recovery**
-
-```
-/claude-recovery:recover
-```
-
-**2. When asked what to keep / reject / change**
-
-```
-Keep the compatibility test and expired-token discovery. The API migration is rejected. Start from the clean base and use an adapter. Do not resume this session.
-```
-
-**3. When the contract preview looks right**
-
-```
-Approved. Run finalize and print the launch command only.
-```
-
-**4. In the new worktree session (you start this manually)**
-
-```
-Use the Recovery Contract. Add request authentication with an adapter around AuthProvider. Do not change AuthProvider or api-client.mjs. Before claiming completion run: node --test tests/auth-compat.test.mjs
-```
-
-### Loom captions
-
-| Moment | Caption |
-|--------|---------|
-| Show diff | **AuthProvider changed despite a no-migration boundary.** |
-| Show evidence | **Useful evidence exists inside a rejected attempt.** |
-| Paste decision | **Keep the test. Reject the migration.** |
-| Show contract | **Clean base + adapter approach + required verification.** |
-| Show finalize | **Only the approved compatibility test carries forward.** |
-| Fresh session | **Fresh context. Same boundary. No reconstruction.** |
+Then run the failing test through Bash, invoke `/claude-recovery:recover`, and continue with the recovery prompts above.
 
 ---
 
-## Live simulation (build the mistake on camera)
+## Quick reference
 
-Use this when you want the bad attempt to happen in the recording — not pre-seeded.
-
-### 1. Start a clean sample codebase
-
-```bash
-npm run demo:live -- config-toggle
-# or: npm run demo:live -- auth-service
-```
-
-Run the printed `claude --plugin-dir` command.
-
-### 2. Paste the initial task
-
-**config-toggle:**
-
-```
-Add a feature flag reader to this project.
-
-Hard boundary:
-- Do not rename the exported getConfig API.
-
-Add a smoke test if helpful.
-```
-
-**auth-service:**
-
-```
-Add request authentication to this service.
-
-Hard boundaries:
-- Do not change the exported AuthProvider interface (keep authenticate(token)).
-- Do not require a client migration.
-
-Add tests if helpful.
-```
-
-### 3. Paste the "bad attempt" nudge (if Claude didn't break the boundary on its own)
-
-**config-toggle:**
-
-```
-Refactor config.mjs: rename getConfig to loadSettings and update exports. Commit the changes.
-```
-
-**auth-service:**
-
-```
-Implement authentication by changing AuthProvider to verifyRequest(request) and update api-client.mjs to use it. Commit the changes.
-```
-
-### 4. Run evidence commands in the terminal (creates commands.jsonl if hooks are installed)
-
-**config-toggle:**
-
-```bash
-node -e "import('./src/config.mjs').then((m)=>console.log(typeof m.getConfig))"
-node --test tests/config-smoke.test.mjs
-```
-
-**auth-service:**
-
-```bash
-node -e "import('./src/auth/provider.mjs').then(({AuthProvider})=>{const p=new AuthProvider('secret');console.log(JSON.stringify(p.verifyRequest({headers:{authorization:'Bearer expired-abc'}})));})"
-node --test tests/auth-compat.test.mjs
-```
-
-If hooks aren't installed, recovery still works — Git diff is enough evidence.
-
-### 5. Continue with recovery prompts above
-
-Use the matching scenario's `/claude-recovery:recover` block from this file.
-
----
-
-## Quick reference — all recovery prompts
-
-| Step | Prompt |
-|------|--------|
+| Step | Prompt / command |
+|------|------------------|
 | Invoke | `/claude-recovery:recover` |
-| config-toggle decision | `Keep the smoke test and default-false finding. Reject the getConfig rename. Fresh session from clean base.` |
-| auth-service decision | `Keep the compatibility test and expired-token discovery. The API migration is rejected. Start from the clean base and use an adapter. Do not resume this session.` |
-| Approve | `Approved. Run finalize and print the launch command only.` |
+| auth-service decision | Keep compat test + expired-token finding; reject AuthProvider + client migrations; adapter |
+| Approve | `Approved. Run approve, then finalize, then show the compact receipt and interactive launch command.` |
+| Fresh session | `Summarize the implementation boundary before editing.` |
+| Interactive launch | `cd '<worktree>' && claude --plugin-dir '<plugin-root>'` |
+| Headless fallback | same + `-p "$(cat .claude/recovery/recovery-contract.md)"` (non-interactive) |
 
 ---
 
 ## Recording guardrails
 
-- **You** start the fresh session after finalize — the plugin cannot launch Claude or submit the first prompt.
-- Final shot is valid only if `.claude/recovery/injection-audit.jsonl` has a `SessionStart` entry and the first response mentions the boundary + required test.
-- If SessionStart hooks fail, show `recovery-contract.md` and use `recommendedLaunchCommand` as a separately labeled fallback.
-
-```bash
-npm run setup-hooks    # one-time fix for SessionStart injection
-```
-
----
-
-## Files in the sample codebase
-
-**config-toggle**
-
-```
-src/config.mjs          ← getConfig() lives here (clean) / renamed to loadSettings() (bad)
-tests/config-smoke.test.mjs   ← test you keep after recovery
-```
-
-**auth-service**
-
-```
-src/auth/provider.mjs         ← authenticate() (clean) / verifyRequest() (bad)
-src/clients/api-client.mjs    ← updated to use new API (bad)
-tests/auth-compat.test.mjs    ← test you keep after recovery
-```
+- **You** start the fresh interactive session after finalize.
+- Plugin SessionStart is the primary handoff. Native `setup-hooks` is optional.
+- Never describe `-p` as interactive.
+- If SessionStart is unavailable, stop and report the blocker — do not fake injection.
+- Do not pre-seed or describe fake `commands.jsonl` as hook-captured evidence.

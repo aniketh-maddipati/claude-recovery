@@ -2,26 +2,48 @@
 
 All notable changes to **claude-recovery** are documented here.
 
-## [Unreleased]
+## [0.1.2] - 2026-08-06
 
 ### Added
 
-- `package.json` with local npm scripts (`npm test`, `npm run demo`, `npm run sandbox`, etc.)
-- Zero runtime dependencies — Node.js built-ins only; no `npm install` required
+- Mechanically enforced approval state machine: `preview` → `approve` → `finalize` (finalize never calls approve)
+- SHA-256 digests for exact `decision.json` bytes and a stable recovery plan payload
+- Compact `receipt` command (and `finalize --format compact`) for Loom-friendly output
+- `npm run demo:preflight` — local machine checks without global settings writes
+- `npm run demo:receipt` — print compact receipt after finalize
+- `.claude-plugin/marketplace.json` for single-plugin repository distribution
+- Automatic boundary verification during `finalize`
+- `recommendedLaunchCommandHeadless` for explicit non-interactive `-p` fallback
+
+### Changed
+
+- Primary launch command is interactive (`cd … && claude --plugin-dir …`); `-p` is headless-only
+- Plugin-scoped SessionStart is documented and messaged as the primary handoff
+- Native `setup-hooks.mjs` installer labeled as optional compatibility fallback
+- Skill flow is `capture → inspect` with separate approve and finalize steps
+- Demo fixture is an honest deterministic mixed-attempt overlay (no seeded `decision.json` / fake `commands.jsonl`)
+- README rewritten for HN legibility with built-in comparison table and privacy notes
+- Version bumped to 0.1.2 across package and plugin manifests
+
+### Fixed
+
+- Finalize no longer implicitly approves an unapproved preview
+- Changing the decision or plan after approve invalidates finalize before worktree creation
+- Removed misleading `BAD ATTEMPT` fixture markers and fake hook-captured evidence from the recording path
 
 ## [0.1.1] - 2026-07-31
 
 ### Added
 
-- `scripts/setup-hooks.mjs` — one-time install of native Claude Code hooks for reliable SessionStart contract injection
+- `scripts/setup-hooks.mjs` — optional native Claude Code hooks for SessionStart contract injection
 - `scripts/lib/native-hooks.mjs` — shared merge logic for `~/.claude/settings.json`
-- Launch command now embeds `recovery-contract.md` via `-p "$(cat ...)"` as the primary reliable path
+- Launch command variants for interactive and `-p` embedding paths
 
 ### Changed
 
 - `pending-contract.json` stores full `recovery-contract.md` text (Keep/Discard/Next), not just continuation excerpt
-- `launch-instructions` exposes `recommendedLaunchCommandInteractive` and `setupNativeHooksCommand`
-- Manual paste documented as last-resort fallback, not primary path
+- `launch-instructions` exposes interactive and native-hook helper fields
+- Manual paste documented as last-resort fallback
 
 ## [0.1.0] - 2026-07-31
 

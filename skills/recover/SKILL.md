@@ -11,18 +11,13 @@ This skill helps the developer recover from an untrustworthy Claude Code attempt
 It does **not** automatically detect failure, rewind sessions, or recover hidden reasoning.
 The developer decides what to keep, reject, or change.
 
-## Step 1 — Inspect local evidence
+## Step 1 — Capture, then inspect
 
-Run the recovery helper from the project root (must be a Git repository with at least one commit):
-
-```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/recovery.mjs inspect
-```
-
-If evidence has not been captured yet in this attempt, also run:
+Always snapshot the current observable Git state **before** inspecting:
 
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/scripts/recovery.mjs capture
+node ${CLAUDE_PLUGIN_ROOT}/scripts/recovery.mjs inspect
 ```
 
 Read the JSON output. Treat Git diffs, command output, exit codes, and timestamps as **Observed evidence** only — never as automatic semantic verdicts.
@@ -48,9 +43,9 @@ Ask the developer:
 What should the next attempt keep, reject, or change?
 ```
 
-Wait for their answer before proceeding.
+**Stop and wait** for their answer before proceeding.
 
-## Step 4 — Build an editable Recovery Contract
+## Step 4 — Write the decision and preview
 
 Turn the developer's answer into a Recovery Contract with this exact structure:
 
@@ -88,44 +83,66 @@ Then preview without applying changes:
 node ${CLAUDE_PLUGIN_ROOT}/scripts/recovery.mjs preview --decision-file .claude/recovery/decision.json
 ```
 
-Show the developer the preview output including continuation context. Mark inferred groupings as **Inferred suggestion**, never as fact.
+Show the developer the exact plan (selected/discarded patches, digests, continuation context).
+Mark inferred groupings as **Inferred suggestion**, never as fact.
 
-## Step 5 — Show exact recovery plan
+Preview does **not** approve, create a worktree, apply patches, or write an approved pending contract.
 
-Display clearly (all labels preserved):
+## Step 5 — Wait for explicit approval
 
-1. **Observed evidence** — source SHA (`git rev-parse HEAD` at capture time)
-2. **User decision** — selected patch files to keep
-3. **User decision** — discarded patch files/hunks
-4. **Inferred suggestion** — continuation context text
-5. Exact Git worktree command
-6. Exact Claude Code launch command (from `launch-instructions`)
+**Do not** run `approve` or `finalize` until the developer explicitly approves.
 
-Example worktree command shape:
+When the developer explicitly approves, run these as **separate** commands (never collapse into one implicit operation):
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/recovery.mjs create-worktree --base <sha> --name recovery-<timestamp>
+node ${CLAUDE_PLUGIN_ROOT}/scripts/recovery.mjs approve \
+  --decision-file .claude/recovery/decision.json
+
+node ${CLAUDE_PLUGIN_ROOT}/scripts/recovery.mjs finalize \
+  --decision-file .claude/recovery/decision.json \
+  --name recovery-<timestamp>
 ```
 
-Get launch instructions:
+Then show the compact receipt:
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/recovery.mjs launch-instructions --manifest .claude/recovery/recovery-manifest.json
+node ${CLAUDE_PLUGIN_ROOT}/scripts/recovery.mjs receipt \
+  --manifest .claude/recovery/recovery-manifest.json
 ```
 
-## Step 6 — Require explicit approval
+## Step 6 — Manual interactive launch
 
-**Do not** create the worktree, apply patches, or write `pending-contract.json` until the developer explicitly approves.
-
-When approved, run:
+Print launch instructions:
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/recovery.mjs finalize --decision-file .claude/recovery/decision.json --name recovery-<timestamp>
+node ${CLAUDE_PLUGIN_ROOT}/scripts/recovery.mjs launch-instructions \
+  --manifest .claude/recovery/recovery-manifest.json
 ```
 
-Then print launch instructions from `launch-instructions`. Prefer **`recommendedLaunchCommand`** (embeds `recovery-contract.md` via `-p`). For ambient SessionStart injection, the developer should run **`node ${CLAUDE_PLUGIN_ROOT}/scripts/setup-hooks.mjs`** once (native hooks).
+Prefer **`recommendedLaunchCommand`** — a real interactive Claude Code session (no `-p`):
 
-Print the launch command for the developer to run manually. This plugin **cannot** invoke `/clear`, move an existing session, or silently start a new interactive Claude Code session.
+```bash
+cd '<worktree>' && claude --plugin-dir '<plugin-root>'
+```
+
+The developer runs that command manually. This plugin **cannot** invoke `/clear`, move an existing session, or silently start Claude.
+
+Handoff order:
+
+1. **Primary:** plugin-scoped SessionStart hook injects the approved contract
+2. **Optional fallback:** `node ${CLAUDE_PLUGIN_ROOT}/scripts/setup-hooks.mjs` (native `~/.claude/settings.json`)
+3. **Headless / non-interactive:** `recommendedLaunchCommandHeadless` (uses `-p`)
+4. **Last resort:** paste `recovery-contract.md` manually
+
+Never describe `-p` as launching an interactive session.
+
+## Labels
+
+Preserve the distinction between:
+
+- **Observed evidence** — Git diffs, command output, exit codes, timestamps
+- **User decision** — keep / reject / change choices
+- **Inferred suggestion** — optional grouping, never fact
 
 ## Honest limitations
 
@@ -133,3 +150,4 @@ Print the launch command for the developer to run manually. This plugin **cannot
 - Chain-of-thought and hidden reasoning are not recoverable.
 - The developer must start Claude Code in the recovery worktree themselves.
 - `SessionStart` injects an approved contract via `additionalContext` when `pending-contract.json` exists and is approved.
+- Finalize refuses if the decision or plan changed after approval.

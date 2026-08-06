@@ -1,10 +1,13 @@
 #!/usr/bin/env node
 /**
  * Build a disposable demo fixture under .demo/<scenario>.
- * Seeds commands.jsonl evidence for Loom / silent demo recording.
+ *
+ * This is a deterministic mixed-attempt fixture: clean base + rejected overlay.
+ * It does NOT pre-seed decision.json, fake commands.jsonl, or approved contracts.
+ * Real PostToolUse evidence is captured during the Claude Code recording.
  */
 
-import { existsSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
@@ -28,17 +31,6 @@ function parseArgs(argv) {
   return options;
 }
 
-function runRecovery(args, cwd) {
-  const result = spawnSync('node', [join(ROOT, 'scripts', 'recovery.mjs'), ...args], {
-    cwd,
-    encoding: 'utf8',
-  });
-  if (result.status !== 0) {
-    throw new Error(`recovery.mjs ${args.join(' ')} failed: ${result.stderr || result.stdout}`);
-  }
-  return JSON.parse(result.stdout);
-}
-
 export function demoFixturePath(scenarioName) {
   return join(DEMO_ROOT, scenarioName);
 }
@@ -56,12 +48,10 @@ export function setupDemoFixture({ scenario: scenarioName = 'auth-service', rese
   }
 
   const { cleanBaseSha } = setupFixtureSandbox(scenario.fixtureDir, fixture, {
-    withBadAttempt: true,
+    withRejectedAttempt: true,
+    seedDecision: false,
+    seedCommandEvidence: false,
   });
-
-  const recoveryDir = join(fixture, '.claude', 'recovery');
-  scenario.seedCommandsEvidence(recoveryDir, writeFileSync);
-  runRecovery(['capture'], fixture);
 
   const pluginDir = process.env.CLAUDE_RECOVERY_PLUGIN_DIR || ROOT;
   const launchCommand = `cd ${fixture} && claude --plugin-dir ${pluginDir}`;
@@ -69,6 +59,11 @@ export function setupDemoFixture({ scenario: scenarioName = 'auth-service', rese
   return {
     ok: true,
     scenario: scenario.id,
+    mode: 'deterministic-fixture',
+    note:
+      'Deterministic mixed-attempt fixture: rejected Git overlay + useful test. ' +
+      'Not proof that Claude independently violated an instruction. ' +
+      'commands.jsonl and decision.json are intentionally absent until the real session.',
     loomTitle: scenario.loomTitle,
     oneLiner: scenario.oneLiner,
     story: scenario.story,
@@ -82,6 +77,14 @@ export function setupDemoFixture({ scenario: scenarioName = 'auth-service', rese
     freshSessionPaste: scenario.freshSessionPaste,
     demoCommands: scenario.demoCommands,
     promptsFile: join(ROOT, 'demo', 'PROMPTS.md'),
+    startingState: {
+      gitDiff: 'present (rejected attempt overlay)',
+      usefulTest: 'present',
+      commandsJsonl: 'absent',
+      decisionJson: 'absent',
+      recoveryManifest: 'absent',
+      approvedPendingContract: 'absent',
+    },
   };
 }
 
@@ -90,29 +93,43 @@ function printDemoInstructions(result) {
 Demo fixture ready (${result.scenario}): ${result.fixture}
 ${result.loomTitle} — ${result.oneLiner}
 
+This is a deterministic mixed-attempt fixture (not live Claude misbehavior).
+Starting state: Git diff present, useful test present, commands.jsonl absent,
+decision.json absent, no recovery manifest / approved pending contract.
+
+Preflight (recommended):
+
+  npm run demo:preflight
+
 Run this in a terminal with authenticated Claude Code (120% zoom, crop to active pane):
 
   ${result.launchCommand}
 
-Then invoke: /claude-recovery:recover
+During recording, run the failing compatibility test through Bash so the real
+PostToolUse hook can capture commands.jsonl. Then invoke:
+
+  /claude-recovery:recover
 
 When asked what to keep/reject/change, paste:
 
   ${result.decisionPaste}
 
-When the contract preview looks right:
+When the contract preview looks right, explicitly approve. Claude should then run
+approve and finalize (separate steps). Show the compact receipt:
 
-  ${result.approvePaste}
+  node ${result.pluginDir}/scripts/recovery.mjs receipt \\
+    --manifest .claude/recovery/recovery-manifest.json
 
-After finalize, run the printed freshClaudeCommand (recommendedLaunchCommandInteractive)
-yourself in a new terminal — the plugin cannot start the fresh session for you.
+Launch the fresh interactive session yourself (plugin cannot start Claude):
+
+  <recommendedLaunchCommand from receipt — interactive, no -p>
 
 In the fresh session, paste:
 
   ${result.freshSessionPaste}
 
-Copy-paste prompts for all scenarios: demo/PROMPTS.md
-Shot list (30-sec): demo/RECORDING.md`);
+Copy-paste prompts: demo/PROMPTS.md
+Shot list (60–75 sec primary): demo/RECORDING.md`);
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 /**
- * Install claude-recovery hooks into native Claude Code settings for reliable
- * SessionStart contract injection (plugin hooks may not surface additionalContext).
+ * Optional compatibility fallback: install claude-recovery hooks into native
+ * Claude Code settings (~/.claude/settings.json).
+ *
+ * Primary SessionStart handoff is the plugin-scoped hook in hooks/hooks.json.
+ * Use this installer only when plugin SessionStart additionalContext is unavailable.
  *
  *   node scripts/setup-hooks.mjs
  *   node scripts/setup-hooks.mjs --check
@@ -60,11 +63,14 @@ function main() {
   console.log(JSON.stringify({
     ...result,
     message: result.alreadyInstalled && !options.dryRun
-      ? 'Native recovery hooks were already installed; settings refreshed.'
+      ? 'Native recovery hooks were already installed; settings refreshed (optional fallback).'
       : options.dryRun
         ? 'Dry run — no settings file written.'
-        : 'Installed native recovery hooks. SessionStart contract injection should now be reliable.',
-    nextStep: 'Run claude from a recovery worktree, or re-run finalize and use launch-instructions.',
+        : 'Installed native recovery hooks as an optional compatibility fallback. ' +
+          'Prefer the plugin-scoped SessionStart hook for normal use.',
+    nextStep:
+      'Primary path: launch Claude interactively in the recovery worktree with --plugin-dir. ' +
+      'Native hooks are only needed if plugin SessionStart injection fails on your Claude Code build.',
   }, null, 2));
 }
 

@@ -1,4 +1,4 @@
-# Limitations (v0.1.0)
+# Limitations (v0.1.2)
 
 Honest scope boundaries for **claude-recovery**. Read this before relying on the plugin in production workflows.
 
@@ -10,32 +10,45 @@ Honest scope boundaries for **claude-recovery**. Read this before relying on the
 - Detect semantic truth automatically
 - Invoke `/clear`, move an existing session, or silently start interactive Claude Code
 - Replace Git or act as automatic semantic recovery
+- Supersede Claude Code `/rewind`, `/branch`, `/fork`, or native worktrees
 
-The developer makes the recovery decision.
+The developer makes the recovery decision. The distinction from Claude’s built-ins is **selective salvage** of developer-approved artifacts into a clean continuation with an explicit Recovery Contract.
 
 ## Requirements
 
 - **Git repository with at least one commit.** Errors state this clearly when missing.
-- **Developer manually launches** Claude Code in the recovery worktree using the printed command.
+- **Developer manually launches** Claude Code in the recovery worktree using the printed interactive command.
+
+## Approval boundary
+
+Finalize never silently approves. The required lifecycle is:
+
+```text
+capture → inspect → write decision → preview → approve → finalize → verify → manual launch
+```
+
+Changing `decision.json` or the recovery plan after `approve` makes `finalize` refuse before creating a worktree.
 
 ## SessionStart contract injection
 
-`SessionStart` reads `.claude/recovery/pending-contract.json` from the **session cwd**.
+**Primary path:** plugin-scoped SessionStart hook (`hooks/hooks.json`) reads `.claude/recovery/pending-contract.json` from the **session cwd** and injects approved `additionalContext`.
 
-- `create-worktree` seeds the approved contract into the recovery worktree for this reason.
+- `finalize` / `create-worktree` seeds the approved contract into the recovery worktree for this reason.
 - If Claude Code is started outside that worktree, injection will not occur — use the manual paste fallback (`recovery-contract.md`).
+- Only approved contracts inject; unapproved or malformed pending contracts are ignored and must not crash Claude.
+- Injection occurs once (audit record written).
 
-**Plugin hook caveat:** [anthropics/claude-code#16538](https://github.com/anthropics/claude-code/issues/16538) reports that plugin `SessionStart` hooks may execute successfully but not surface `hookSpecificOutput.additionalContext` to the model on some Claude Code versions.
-
-**Reliable path (recommended):** run once:
+**Optional compatibility fallback:** if plugin SessionStart `additionalContext` does not surface on your Claude Code build ([anthropics/claude-code#16538](https://github.com/anthropics/claude-code/issues/16538)), you may run:
 
 ```bash
 node /path/to/claude-recovery/scripts/setup-hooks.mjs
 ```
 
-This mirrors the plugin hooks into native `~/.claude/settings.json`, where SessionStart injection is reported to work.
+This installs native hooks into `~/.claude/settings.json`. It is **not** required for normal use and is never run automatically.
 
-**Launch without paste:** `launch-instructions` prints a command embedding `recovery-contract.md` via `-p "$(cat .claude/recovery/recovery-contract.md)"`. Manual paste remains the last-resort fallback.
+**Headless / non-interactive fallback:** `recommendedLaunchCommandHeadless` embeds `recovery-contract.md` via `-p`. This is not an interactive session.
+
+**Last resort:** paste `recovery-contract.md` manually.
 
 ## Evidence capture
 
@@ -50,11 +63,16 @@ Observed evidence is limited to local, machine-readable sources:
 
 Evidence in a recovery worktree starts fresh for the continuation session. Parent attempt evidence remains in the source tree under `.claude/recovery/`.
 
+## Demo fixture honesty
+
+The auth-service demo fixture is a **deterministic mixed-attempt overlay**. It is suitable for rehearsal and recording setup. It is not proof that Claude independently violated an instruction. Recording fixtures do not pre-seed `decision.json` or fake `commands.jsonl`.
+
 ## Patch selection (v1)
 
 - Selected patches are **whole files** only.
 - Manifest structure supports future hunk-level selection; there is no hunk UI in v1.
 - Patch apply failures leave an inspectable error file and do not modify the original worktree.
+- Finalize runs boundary verification automatically after applying approved patches.
 
 ## Headless / scripted Claude (`claude -p`)
 
@@ -69,6 +87,8 @@ Evidence in a recovery worktree starts fresh for the continuation session. Paren
 
 ## Security notes
 
-- Recovery data stays under `.claude/recovery/` locally; nothing is sent remotely by this plugin.
+- Recovery artifacts are written locally under `.claude/recovery/`.
+- Captured prompts and Bash output may contain sensitive data — review before sharing.
 - Only **approved** contracts are injected; unapproved `pending-contract.json` is ignored.
 - Original worktree is not modified during recovery setup (worktree + selected patches only).
+- Remove artifacts with `rm -rf .claude/recovery .claude/recovery-worktrees` when finished.

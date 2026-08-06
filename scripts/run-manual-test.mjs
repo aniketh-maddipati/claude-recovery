@@ -296,6 +296,10 @@ function main() {
       }
     }
 
+    log('preview', 'running recovery.mjs preview ...');
+    runRecovery(['preview', '--decision-file', '.claude/recovery/decision.json'], sandbox);
+    log('approve', 'running recovery.mjs approve ...');
+    runRecovery(['approve', '--decision-file', '.claude/recovery/decision.json'], sandbox);
     log('finalize', 'running recovery.mjs finalize ...');
     const finalized = runRecovery(
       ['finalize', '--decision-file', '.claude/recovery/decision.json', '--name', 'manual-test'],

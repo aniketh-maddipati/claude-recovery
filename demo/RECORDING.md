@@ -1,51 +1,163 @@
-# Silent 30-second demo — recording script
+# Loom recording — primary 60–75 second cut
 
-Prepare the fixture:
+Prepare the deterministic mixed-attempt fixture:
 
 ```bash
-./demo/run-demo.sh
-# or: npm run demo              # auth-service (30-sec default)
-# or: npm run demo:config       # config-toggle (simplest for Loom)
+npm run demo:preflight
+npm run demo
 ```
 
-**All copy-paste prompts:** [`demo/PROMPTS.md`](PROMPTS.md)
+This fixture overlays a rejected auth-service attempt on a clean base. It is **not** proof that Claude independently violated an instruction. Starting state:
 
-Run the printed `cd ... && claude --plugin-dir ...` command in a terminal with authenticated Claude Code. This is a real Git worktree — do not substitute an edited terminal recording.
+```text
+Git diff: present
+Useful compatibility test: present
+commands.jsonl: absent or empty
+decision.json: absent
+recovery manifest: absent
+approved pending contract: absent
+```
 
-**Terminal:** 120% zoom, crop to the active pane. Use captions below as brief editing overlays.
+**Prompts:** [`demo/PROMPTS.md`](PROMPTS.md)
 
-| Time | Screen action | On-screen caption |
-|---|---|---|
-| 0–3 sec | Title card on a dark background. | **Claude Code recovery: keep the good work, restart cleanly.** |
-| 3–7 sec | In the prepared fixture, show `cat .claude/recovery/original-outcome.json`, then the three-line `git diff --stat` and the `verifyRequest` / changed client call. | **AuthProvider changed despite a no-migration boundary.** |
-| 7–11 sec | Show only the two saved evidence records: `tail -n 2 .claude/recovery/commands.jsonl`. Keep the visible output to the expired-token result and failed compatibility test summary. | **Useful evidence exists inside a rejected attempt.** |
-| 11–17 sec | Type `/claude-recovery:recover`. When asked, paste the decision from `run-demo.sh`. Approve when Claude shows the contract preview. | **Keep the test. Reject the migration.** |
-| 17–22 sec | Show continuation context from the preview (`continuationContext` in recovery-manifest.json, or the preview output). Focus on Outcome, Non-negotiable boundary, Carry forward, Rejected approach, and Before claiming completion. | **Clean base + adapter approach + required verification.** |
-| 22–26 sec | Show the compact `finalize` result: new worktree path and `applied: tests/auth-compat.test.mjs`; then `git diff --name-only` in the new worktree. Do not scroll. | **Only the approved compatibility test carries forward.** |
-| 26–30 sec | Run the printed `freshClaudeCommand` yourself. In the new Claude session, show the Recovery Contract context and a short first response such as “I'll use an adapter and run `node --test tests/auth-compat.test.mjs`.” | **Fresh context. Same boundary. No reconstruction.** |
+Run the printed interactive launch command. Terminal: 120% zoom, crop to the active pane. Narrate or use captions.
 
-## Quick command reference (inside the fixture)
+## Primary sequence (60–75 seconds)
+
+### 0–8 seconds
+
+Show:
 
 ```bash
-cat .claude/recovery/original-outcome.json
-git diff --stat HEAD
-git diff HEAD -- src/auth/provider.mjs src/clients/api-client.mjs
-tail -n 2 .claude/recovery/commands.jsonl
+git diff --stat
+node --test tests/auth-compat.test.mjs
+```
+
+Caption:
+
+```text
+Two rejected API changes. One useful compatibility test.
+```
+
+The failing test must run through Bash in Claude Code (or with plugin hooks active) so the real PostToolUse hook can capture `commands.jsonl`. Do not pretape fake evidence.
+
+### 8–18 seconds
+
+Invoke:
+
+```text
 /claude-recovery:recover
-node -e "const m=require('fs').readFileSync('.claude/recovery/recovery-manifest.json','utf8');console.log(JSON.parse(m).continuationContext)"
-# after finalize, in the new worktree:
+```
+
+Show the observed evidence and the exact keep/reject/change question:
+
+```text
+What should the next attempt keep, reject, or change?
+```
+
+### 18–28 seconds
+
+Developer decision (type or paste):
+
+```text
+Keep the compatibility test and expired-token finding.
+Reject the AuthProvider and client migrations.
+Start clean and use an adapter.
+```
+
+### 28–40 seconds
+
+Show only the important Recovery Contract fields:
+
+```text
+KEEP
+tests/auth-compat.test.mjs
+expired-token finding
+
+DISCARD
+src/auth/provider.mjs
+src/clients/api-client.mjs
+
+NEXT
+clean base
+adapter approach
+run compatibility test
+```
+
+### 40–55 seconds
+
+Explicitly approve. Claude must run **approve** then **finalize** as separate steps. Show the compact receipt:
+
+```bash
+node /path/to/claude-recovery/scripts/recovery.mjs receipt \
+  --manifest .claude/recovery/recovery-manifest.json
+```
+
+Expected shape:
+
+```text
+RECOVERY READY
+…
+Kept
+tests/auth-compat.test.mjs
+…
+Boundary verification
+PASS
+…
+Launch manually
+cd '<worktree>' && claude --plugin-dir '<plugin-root>'
+```
+
+In the recovery worktree:
+
+```bash
 git diff --name-only
 ```
 
-## Recording guardrails
+It should show only:
 
-- The user — not the plugin — starts the fresh interactive session. The plugin cannot invoke `/clear`, launch Claude, or submit the first interactive prompt.
-- The final shot is valid only if the new session's `.claude/recovery/injection-audit.jsonl` has a `SessionStart` entry and the first response acknowledges the adapter boundary and required test.
-- If the plugin hook does not load in the installed Claude Code build, do not claim success. Show `recovery-contract.md` and use the explicit non-interactive `recommendedLaunchCommand` only as a separately labeled fallback.
+```text
+tests/auth-compat.test.mjs
+```
 
-## Fallback when SessionStart hooks fail
+### 55–75 seconds
+
+Manually launch the **interactive** session (no `-p`):
 
 ```bash
-node scripts/setup-hooks.mjs   # one-time native hook install
-# or use recommendedLaunchCommand from finalize output (embeds contract via -p)
+cd '<worktree>' && claude --plugin-dir '<plugin-root>'
 ```
+
+Ask:
+
+```text
+Summarize the implementation boundary before editing.
+```
+
+The fresh session must identify:
+
+- preserve `AuthProvider.authenticate(token)`
+- do not migrate `ApiClient`
+- use an adapter
+- run `tests/auth-compat.test.mjs`
+
+Do **not** wait for a full implementation in the demo.
+
+If SessionStart injection is unavailable in this environment, **stop and report the exact blocker**. Do not fake injection. Optional fallback (separately labeled): native `setup-hooks.mjs`, or headless `recommendedLaunchCommandHeadless` (`-p`, non-interactive), or manual paste.
+
+## 30-second cut (secondary)
+
+| Time | Action | Caption |
+|------|--------|---------|
+| 0–5s | `git diff --stat` + failing compat test | Two rejected API changes. One useful test. |
+| 5–12s | `/claude-recovery:recover` + decision paste | Keep the test. Reject the migration. |
+| 12–20s | Approve → receipt → `git diff --name-only` in worktree | Only the approved test carries forward. |
+| 20–30s | Manual interactive launch + boundary summarize | Fresh session. Same boundary. |
+
+## Recording guardrails
+
+- You start the fresh interactive session — the plugin cannot launch Claude or invoke `/clear`.
+- Do not describe `-p` as interactive.
+- Do not claim seeded `commands.jsonl` was hook-captured.
+- Final shot is valid only if SessionStart injects (check `injection-audit.jsonl`) **or** you clearly label a fallback path.
+- Discarded source files in the new worktree must remain byte-identical to the clean base.
