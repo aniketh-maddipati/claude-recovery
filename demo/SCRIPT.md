@@ -15,26 +15,51 @@ Off camera:
 
 Open this file beside Loom. Follow **top → bottom**. Say **only** the quoted lines. Paste **only** the marked blocks. Stay silent while Claude works. Trim model waits in Loom; add “waits trimmed”.
 
-**Published cut target: 45–75 seconds** (spoken lines ~55s; trim waits to fit).
+**Published cut target: 45–75 seconds** (spoken lines ~75s; trim waits to fit).
 
 ---
 
-## Scenario primer (read this once — helps you narrate)
+## READ THIS FIRST — what is AuthProvider? (plain English)
 
-This is a tiny auth-service repo. The **original task** was: add request authentication **without** changing the public `AuthProvider` API and **without** forcing a client migration.
+**You are not demoing a real auth product.** This is a **fake 3-file mini app** used only to show recovery.
 
-The **mixed attempt** on screen did three things:
+Think of it like this:
 
-| What happened | File | Viewer should notice |
-|---------------|------|----------------------|
-| Rejected API rewrite | `src/auth/provider.mjs` | `authenticate(token)` → `verifyRequest(request)` |
-| Rejected client migration | `src/clients/api-client.mjs` | client now calls `verifyRequest` with headers |
-| Useful artifact to keep | `tests/auth-compat.test.mjs` | test still expects `provider.authenticate` to exist |
-| Useful finding to keep | expired-token edge case | tokens starting with `expired` fail auth |
+```text
+AuthProvider     = “login checker” — one function: is this token valid?
+                   Clean version:  authenticate("some-token")  →  { ok: true/false }
 
-The compat test **fails on purpose** because the provider no longer exposes `authenticate`. That failure is the proof the migration is wrong — and the test itself is worth keeping for the next attempt.
+ApiClient        = “app code that uses the login checker”
+                   Clean version:  calls provider.authenticate(token)
 
-**What recovery does for viewers:** keep the test + finding, restore rejected source files to the clean base, hand the next session an explicit Recovery Contract.
+auth-compat.test = “guardrail test Claude wrote”
+                   Checks: authenticate() still exists (don’t break callers)
+```
+
+**What went wrong in the mixed attempt (on screen now):**
+
+```text
+BEFORE (clean — what we want back):
+  provider.authenticate(token)
+
+AFTER (rejected — what Claude tried):
+  provider.verifyRequest({ headers: ... })   ← renamed + different shape
+  api-client.mjs updated to match            ← forced migration
+```
+
+The compat test still looks for `authenticate`. **It fails** — that's the point. The test is useful; the rename is not.
+
+**Expired-token finding:** in the clean code, tokens starting with `expired` are rejected. Worth remembering for the next attempt. Not a file — a note from the attempt.
+
+**Recovery in one sentence:** keep the test + finding, undo the rename/migration on provider + client, start fresh with an adapter approach.
+
+**File map (only 3 matter):**
+
+| File | Plain name | Role in demo |
+|------|------------|--------------|
+| `src/auth/provider.mjs` | login checker | REJECT changes (restore `authenticate`) |
+| `src/clients/api-client.mjs` | caller | REJECT changes (restore old call) |
+| `tests/auth-compat.test.mjs` | guardrail test | KEEP |
 
 ---
 
@@ -65,11 +90,11 @@ The compat test **fails on purpose** because the provider no longer exposes `aut
 
 ---
 
-### 2 — Set up the scenario (~10s)
+### 2 — Explain the fake repo in plain English (~14s)
 
 **YOU SAY:**
 
-> This is a small auth-service demo. The task was add authentication without changing the public AuthProvider interface and without migrating ApiClient. The attempt on screen rewrote AuthProvider to verifyRequest, migrated the client, and also added a compatibility test that still expects authenticate. That test fails — and that failure is exactly why I want to recover instead of rewinding.
+> Quick context — this is a fake mini app, not a real product. AuthProvider is just a login checker: you pass a token string, it says valid or not. The function is called authenticate. ApiClient is the code that calls it. Claude renamed authenticate to verifyRequest and rewrote the client to match. That's the rejected migration. It also added a test that says authenticate must still exist — that test fails right now, and that's the useful part I want to keep.
 
 **VIEWERS SHOULD SEE:** Terminal cwd is `.demo/auth-service`. You have not run recovery yet.
 
@@ -101,7 +126,7 @@ Do not edit anything. Stop after reporting the observable failure and changed fi
 
 **YOU SAY** (once output is visible — short pointer):
 
-> So the migration broke the public API, the client moved with it, and the compat test is catching that. I want to keep that test, not the migration.
+> So authenticate is gone, verifyRequest is in its place, the client was migrated, and the guardrail test is failing. I want to keep that test — not the rename.
 
 **OVERLAY:** `The implementation direction is rejected. The test is useful.`
 
@@ -133,7 +158,7 @@ Do not edit anything. Stop after reporting the observable failure and changed fi
 
 **YOU SAY:**
 
-> I’m keeping the compatibility test and the expired-token finding. I’m rejecting the AuthProvider interface change and the ApiClient migration. Next attempt starts from the clean base, uses an adapter instead of rewriting the API, and has to pass that compat test before we’re done.
+> I'm keeping the guardrail test and the expired-token finding. I'm rejecting the rename on the login checker and the client migration. Next attempt starts clean, uses an adapter instead of renaming authenticate, and has to pass that test.
 
 **YOU PASTE:**
 
@@ -195,7 +220,7 @@ Copy the launch line from the receipt.
 
 **YOU SAY:**
 
-> In the recovery worktree, only the approved test file should differ from the clean base. Provider and client should be back to authenticate, not verifyRequest.
+> In the recovery worktree, only the test file should differ. Login checker and client should be back to authenticate — not verifyRequest.
 
 **YOU TYPE** (in the recovery worktree, or after `cd` there):
 
@@ -239,8 +264,8 @@ Before editing, summarize the implementation boundary and required verification.
 
 **VIEWERS SHOULD SEE** the fresh session mention roughly:
 
-- preserve `AuthProvider.authenticate(token)` — do **not** use `verifyRequest`
-- do **not** migrate `ApiClient` to a new call shape
+- keep the login checker as `authenticate(token)` — do **not** rename to `verifyRequest`
+- do **not** rewrite `ApiClient` to the new call shape
 - use an **adapter** for the next implementation
 - run `node --test tests/auth-compat.test.mjs` before completion
 
@@ -261,12 +286,13 @@ SAY:  I built claude-recovery for a recovery case rewind doesn’t cover. Rewind
       me choose what survives, preview that as a Recovery Contract, and start a clean
       Git worktree with only the approved files.
 
-SAY:  This is a small auth-service demo. The task was add authentication without
-      changing the public AuthProvider interface and without migrating ApiClient.
-      The attempt on screen rewrote AuthProvider to verifyRequest, migrated the
-      client, and also added a compatibility test that still expects authenticate.
-      That test fails — and that failure is exactly why I want to recover instead
-      of rewinding.
+SAY:  Quick context — this is a fake mini app, not a real product. AuthProvider is
+      just a login checker: you pass a token string, it says valid or not. The
+      function is called authenticate. ApiClient is the code that calls it.
+      Claude renamed authenticate to verifyRequest and rewrote the client to
+      match. That's the rejected migration. It also added a test that says
+      authenticate must still exist — that test fails right now, and that's
+      the useful part I want to keep.
 
 SAY:  Let me show the evidence first — the failing test and what files changed.
 PASTE:
@@ -274,18 +300,19 @@ Run `node --test tests/auth-compat.test.mjs` and show `git diff --stat`.
 
 Do not edit anything. Stop after reporting the observable failure and changed files.
 
-SAY:  So the migration broke the public API, the client moved with it, and the
-      compat test is catching that. I want to keep that test, not the migration.
+SAY:  So authenticate is gone, verifyRequest is in its place, the client was
+      migrated, and the guardrail test is failing. I want to keep that test —
+      not the rename.
 
 SAY:  I’m invoking the recover skill. It captures Git state and command evidence,
       then asks me what to keep and reject.
 PASTE:
 /claude-recovery:recover
 
-SAY:  I’m keeping the compatibility test and the expired-token finding. I’m
-      rejecting the AuthProvider interface change and the ApiClient migration.
-      Next attempt starts from the clean base, uses an adapter instead of rewriting
-      the API, and has to pass that compat test before we’re done.
+SAY:  I’m keeping the guardrail test and the expired-token finding. I’m rejecting
+      the rename on the login checker and the client migration. Next attempt
+      starts clean, uses an adapter instead of renaming authenticate, and has
+      to pass that test.
 PASTE:
 Keep the compatibility test and expired-token finding.
 
@@ -293,16 +320,16 @@ Reject the AuthProvider interface change and ApiClient migration.
 
 Restart from the clean base, use an adapter, and require the compatibility test before completion.
 
-SAY:  Contract matches what I want — keep the test, discard the provider and client
-      changes, adapter on the next pass. I’m approving explicitly; approve and
-      finalize run as separate steps.
+SAY:  Contract matches what I want — keep the test, discard the login checker
+      and client changes, adapter on the next pass. I’m approving explicitly;
+      approve and finalize run as separate steps.
 PASTE:
 Approved. Run approve and finalize as separate steps, then show the compact receipt.
 
-SAY:  Boundary verification passed — rejected source files match the clean base again.
+SAY:  Boundary verification passed — rejected files match the clean base again.
 
-SAY:  In the recovery worktree, only the approved test file should differ from the
-      clean base. Provider and client should be back to authenticate, not verifyRequest.
+SAY:  In the recovery worktree, only the test file should differ. Login checker
+      and client should be back to authenticate — not verifyRequest.
 TYPE: git diff --name-only
 
 SAY:  One file. That’s the selective salvage.
@@ -324,12 +351,13 @@ STOP.
 
 | Step | Viewers should see |
 |------|-------------------|
-| Evidence | Failing compat test + diff on provider, client, test |
+| Intro | Fake mini app explained: login checker + caller + guardrail test |
+| Evidence | Failing test + diff on provider, client, test |
 | Recover | Skill invoked, evidence shown, keep/reject question |
-| Decision | Contract preview: KEEP test, DISCARD provider + client |
+| Decision | Contract preview: KEEP test + finding; DISCARD login checker + client |
 | Approve | Receipt: RECOVERY READY, Kept test, Boundary PASS |
 | Worktree | `git diff --name-only` → only `tests/auth-compat.test.mjs` |
-| Fresh session | Summary: authenticate, no migration, adapter, run test |
+| Fresh session | Summary: keep authenticate, no client rewrite, adapter, run test |
 
 ---
 
@@ -338,14 +366,14 @@ STOP.
 | Beat | ~spoken |
 |------|---------|
 | Why the skill | 12s |
-| Scenario setup | 10s |
+| Scenario setup | 14s |
 | Evidence + pointer | 8s |
 | Invoke recover | 6s |
 | Decision | 10s |
 | Approve + boundary | 8s |
 | Worktree proof | 6s |
 | Fresh session + close | 8s |
-| **Total spoken** | **~68s** |
+| **Total spoken** | **~72s** |
 
 Trim model waits in Loom so the published cut lands in **45–75s**.
 

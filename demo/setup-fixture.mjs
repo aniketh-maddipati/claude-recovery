@@ -110,11 +110,12 @@ Deterministic mixed-attempt fixture (not live Claude misbehavior).
 Starting state: Git diff present, useful test present, commands.jsonl absent,
 decision.json absent, no recovery manifest / approved pending contract.
 
-Scenario (tell viewers): small auth-service repo. Task was add authentication
-without changing AuthProvider.authenticate(token) or migrating ApiClient.
-Attempt rewrote provider to verifyRequest, migrated api-client, added compat test
-that still expects authenticate — test fails on purpose. Recovery keeps test,
-restores rejected sources, hands next session a Recovery Contract.
+Scenario (plain English — read demo/SCRIPT.md "READ THIS FIRST"):
+  Fake mini app, not a real product.
+  AuthProvider = login checker (authenticate(token)). ApiClient = code that calls it.
+  Rejected: Claude renamed authenticate → verifyRequest and migrated the client.
+  Keep: guardrail test (auth-compat.test.mjs) + expired-token finding.
+  Recovery: keep test, undo rename on provider + client, hand off Recovery Contract.
 
 Full word-for-word script + viewer cues: demo/SCRIPT.md
 

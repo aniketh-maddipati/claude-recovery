@@ -12,18 +12,20 @@ Prepare with one script (off camera):
 # optional: ./demo/record.sh --launch
 ```
 
-## Scenario (tell viewers this)
+## Scenario (plain English)
 
-Small **auth-service** repo. Original task: add authentication **without** changing `AuthProvider.authenticate(token)` and **without** migrating `ApiClient`.
+**Not a real auth product** — a fake 3-file mini app for the demo.
 
-The mixed attempt on screen:
+| Name in code | Plain English | What happened |
+|--------------|---------------|---------------|
+| `AuthProvider` | login checker | Rejected: `authenticate(token)` renamed to `verifyRequest(...)` |
+| `ApiClient` | code that calls the login checker | Rejected: rewritten to call `verifyRequest` |
+| `auth-compat.test.mjs` | guardrail test | **Keep** — checks `authenticate` still exists (fails today) |
+| expired-token finding | edge-case note | **Keep** — tokens starting with `expired` fail auth |
 
-- **Rejected:** `provider.mjs` — `authenticate(token)` → `verifyRequest(request)`
-- **Rejected:** `api-client.mjs` — client migrated to `verifyRequest`
-- **Keep:** `tests/auth-compat.test.mjs` — still expects `authenticate` (fails today)
-- **Keep:** expired-token finding
+Recovery keeps the test + finding, restores provider and client to the clean base.
 
-The failing compat test is the proof the migration is wrong. Recovery keeps the test, restores rejected sources, hands the next session a Recovery Contract.
+Full explainer + teleprompter: [`demo/SCRIPT.md`](SCRIPT.md) — start at **READ THIS FIRST**.
 
 ## What viewers should see (beat by beat)
 
