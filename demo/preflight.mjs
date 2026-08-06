@@ -12,7 +12,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { ROOT } from '../tests/harness/scenario-e2e.mjs';
-import { setupDemoFixture, demoFixturePath } from './setup-fixture.mjs';
+import { setupDemoFixture, demoFixturePath, assertHonestDemoFixture } from './setup-fixture.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -85,18 +85,8 @@ function main() {
 
   rows.push(check('demo fixture creates without seeded decision/commands', () => {
     const result = setupDemoFixture({ scenario: 'auth-service', reset: true });
-    const fixture = result.fixture;
-    const decision = join(fixture, '.claude', 'recovery', 'decision.json');
-    const commands = join(fixture, '.claude', 'recovery', 'commands.jsonl');
-    const manifest = join(fixture, '.claude', 'recovery', 'recovery-manifest.json');
-    const pending = join(fixture, '.claude', 'recovery', 'pending-contract.json');
-    if (existsSync(decision)) throw new Error('decision.json was pre-seeded');
-    if (existsSync(commands) && readFileSync(commands, 'utf8').trim()) {
-      throw new Error('commands.jsonl was pre-seeded');
-    }
-    if (existsSync(manifest)) throw new Error('recovery-manifest.json was pre-seeded');
-    if (existsSync(pending)) throw new Error('pending-contract.json was pre-seeded');
-    return fixture;
+    assertHonestDemoFixture(result.fixture);
+    return result.fixture;
   }));
 
   rows.push(check('source repository unmodified by fixture', () => {
@@ -157,6 +147,10 @@ function main() {
   console.log(`${failed.length} check(s) failed.`);
   if (failed.some((r) => r.name.startsWith('claude'))) {
     console.log('Install/authenticate Claude Code CLI, then re-run: npm run demo:preflight');
+  } else if (failed.some((r) => r.detail?.includes('commands.jsonl'))) {
+    console.log('Close Claude Code if it is open in .demo/auth-service, then run:');
+    console.log('  rm -rf .demo/auth-service && npm run demo:preflight');
+    console.log('Or: npm run demo:reset && npm run demo:preflight');
   } else {
     console.log('Fix the failing checks, then re-run: npm run demo:preflight');
     console.log('Or run the full suite: npm test');

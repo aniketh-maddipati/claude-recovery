@@ -4,7 +4,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { setupDemoFixture, demoFixturePath } from '../demo/setup-fixture.mjs';
+import { setupDemoFixture, demoFixturePath, stripDemoSessionArtifacts, assertHonestDemoFixture } from '../demo/setup-fixture.mjs';
 import { setupLiveFixture } from '../demo/setup-live.mjs';
 import { listDemoScenarios } from '../demo/scenarios.mjs';
 import { ROOT, setupFixtureSandbox, cleanupScenario } from './harness/scenario-e2e.mjs';
@@ -82,6 +82,13 @@ test('live demo fixture starts clean without bad attempt', () => {
   const content = readFileSync(join(result.fixture, 'src/config.mjs'), 'utf8');
   assert.match(content, /getConfig/);
   assert.doesNotMatch(content, /loadSettings/);
+});
+
+test('setupDemoFixture strips stale commands.jsonl from a previous rehearsal', () => {
+  const result = setupDemoFixture({ scenario: 'auth-service', reset: true });
+  writeFileSync(join(result.fixture, '.claude/recovery/commands.jsonl'), '{"rehearsal":true}\n');
+  stripDemoSessionArtifacts(result.fixture);
+  assert.doesNotThrow(() => assertHonestDemoFixture(result.fixture));
 });
 
 test('PROMPTS.md and RECORDING.md match the implemented flow', () => {

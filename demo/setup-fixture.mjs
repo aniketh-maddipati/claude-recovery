@@ -7,7 +7,7 @@
  * Real PostToolUse evidence is captured during the Claude Code recording.
  */
 
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
@@ -16,6 +16,52 @@ import { getDemoScenario, listDemoScenarios } from './scenarios.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const DEMO_ROOT = join(ROOT, '.demo');
+
+/** Session artifacts that must not exist until the real Claude Code recording. */
+const DEMO_EPHEMERAL_RECOVERY_FILES = [
+  'commands.jsonl',
+  'decision.json',
+  'recovery-manifest.json',
+  'pending-contract.json',
+  'evidence.json',
+  'patches-index.json',
+  'boundary-verification.json',
+  'injection-audit.jsonl',
+  'patch-application-errors.json',
+  'recovery-contract.md',
+];
+
+export function stripDemoSessionArtifacts(fixture) {
+  const recoveryDir = join(fixture, '.claude', 'recovery');
+  if (existsSync(recoveryDir)) {
+    for (const name of DEMO_EPHEMERAL_RECOVERY_FILES) {
+      rmSync(join(recoveryDir, name), { force: true });
+    }
+    rmSync(join(recoveryDir, 'patches'), { recursive: true, force: true });
+  }
+  rmSync(join(fixture, '.claude', 'recovery-worktrees'), { recursive: true, force: true });
+}
+
+export function assertHonestDemoFixture(fixture) {
+  const recoveryDir = join(fixture, '.claude', 'recovery');
+  const checks = [
+    ['decision.json', join(recoveryDir, 'decision.json')],
+    ['commands.jsonl', join(recoveryDir, 'commands.jsonl')],
+    ['recovery-manifest.json', join(recoveryDir, 'recovery-manifest.json')],
+    ['pending-contract.json', join(recoveryDir, 'pending-contract.json')],
+  ];
+  for (const [label, path] of checks) {
+    if (label === 'commands.jsonl') {
+      if (existsSync(path) && readFileSync(path, 'utf8').trim()) {
+        throw new Error(`${label} was pre-seeded`);
+      }
+      continue;
+    }
+    if (existsSync(path)) {
+      throw new Error(`${label} was pre-seeded`);
+    }
+  }
+}
 
 function parseArgs(argv) {
   const options = { scenario: 'auth-service', print: false, list: false };
@@ -52,6 +98,9 @@ export function setupDemoFixture({ scenario: scenarioName = 'auth-service', rese
     seedDecision: false,
     seedCommandEvidence: false,
   });
+
+  stripDemoSessionArtifacts(fixture);
+  assertHonestDemoFixture(fixture);
 
   const pluginDir = process.env.CLAUDE_RECOVERY_PLUGIN_DIR || ROOT;
   const launchCommand = `cd ${fixture} && claude --plugin-dir ${pluginDir}`;

@@ -15,6 +15,7 @@
     "test:claude": "node scripts/run-manual-test.mjs --claude",
     "test:eval": "node scripts/run-manual-test.mjs --eval",
     "demo": "node demo/setup-fixture.mjs --print",
+    "demo:reset": "node -e \"import { rmSync } from 'node:fs'; rmSync('.demo', { recursive: true, force: true }); console.log('Removed .demo/');\"",
     "demo:record": "bash demo/record.sh",
     "demo:preflight": "node demo/preflight.mjs",
     "demo:receipt": "node demo/receipt.mjs",
