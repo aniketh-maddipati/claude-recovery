@@ -33,6 +33,8 @@ All notable changes to **claude-recovery** are documented here.
 - `docs/SHOW_HN.md` — short Show HN draft
 - `demo/SCRIPT.md` — plain-English auth-service explainer (“READ THIS FIRST”), word-for-word teleprompter, viewer cues (45–75s cut)
 - `demo/record.sh` / `npm run demo:record` — one-script Loom recording setup (preflight → fixture → checklist; optional `--launch`)
+- `npm run demo:reset` — remove stale `.demo/` rehearsal artifacts
+- Demo fixture setup strips ephemeral session files (`commands.jsonl`, etc.) so preflight passes after rehearsals
 
 ### Fixed
 
