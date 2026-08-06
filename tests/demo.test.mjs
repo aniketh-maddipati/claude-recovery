@@ -9,6 +9,7 @@ import { setupLiveFixture } from '../demo/setup-live.mjs';
 import { listDemoScenarios } from '../demo/scenarios.mjs';
 import { ROOT, setupFixtureSandbox, cleanupScenario } from './harness/scenario-e2e.mjs';
 import { runRecovery } from './helpers.mjs';
+import { buildPluginZip } from '../scripts/build-plugin-zip.mjs';
 
 for (const scenarioName of listDemoScenarios()) {
   test(`demo fixture ${scenarioName} is honest (diff + test, no seeded decision/commands)`, () => {
@@ -91,6 +92,17 @@ test('setupDemoFixture strips stale commands.jsonl from a previous rehearsal', (
   assert.doesNotThrow(() => assertHonestDemoFixture(result.fixture));
 });
 
+test('plugin zip contains recover skill and manifest', () => {
+  const result = buildPluginZip({ quiet: true });
+  const listing = spawnSync('unzip', ['-l', result.path], { encoding: 'utf8' });
+  assert.equal(listing.status, 0, listing.stderr);
+  const out = listing.stdout;
+  assert.match(out, /\.claude-plugin\/plugin\.json/);
+  assert.match(out, /skills\/recover\/SKILL\.md/);
+  assert.match(out, /commands\/recover\.md/);
+  assert.match(out, /scripts\/recovery\.mjs/);
+});
+
 test('recover is available as skill and command', () => {
   const skill = readFileSync(join(ROOT, 'skills', 'recover', 'SKILL.md'), 'utf8');
   const command = readFileSync(join(ROOT, 'commands', 'recover.md'), 'utf8');
@@ -128,7 +140,7 @@ test('npm run demo prints paste/type sequence', () => {
   });
   assert.equal(result.status, 0, result.stderr);
   const out = `${result.stdout ?? ''}${result.stderr ?? ''}`;
-  assert.match(out, /Teleprompter: demo\/PROMPTS\.md|Full teleprompter: demo\/PROMPTS\.md/);
+  assert.match(out, /claude-recovery\.zip|plugin zip \(recommended\)/i);
   assert.match(out, /skills\/recover\/SKILL\.md/);
   assert.match(out, /recovery\.mjs capture/);
   assert.match(out, /\/claude-recovery:recover/);

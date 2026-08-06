@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { ROOT } from '../tests/harness/scenario-e2e.mjs';
 import { setupDemoFixture, demoFixturePath, assertHonestDemoFixture } from './setup-fixture.mjs';
+import { buildPluginZip } from '../scripts/build-plugin-zip.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -73,6 +74,12 @@ function main() {
     const path = join(ROOT, 'commands', 'recover.md');
     if (!existsSync(path)) throw new Error('missing commands/recover.md');
     return path;
+  }));
+
+  rows.push(check('plugin zip builds', () => {
+    const result = buildPluginZip({ quiet: true });
+    if (!existsSync(result.path)) throw new Error('dist/claude-recovery.zip missing after build');
+    return `${result.path} (${result.bytes} bytes)`;
   }));
 
   rows.push(check('hook configuration parses', () => {
@@ -145,7 +152,8 @@ function main() {
   if (failed.length === 0) {
     console.log('All checks passed.');
     console.log(`Next: npm run demo`);
-    console.log(`Then: cd ${demoFixturePath('auth-service')} && claude --plugin-dir ${ROOT}`);
+    console.log(`Then: export CLAUDE_RECOVERY_PLUGIN_DIR=${join(ROOT, 'dist', 'claude-recovery.zip')}`);
+    console.log(`     cd ${demoFixturePath('auth-service')} && claude --plugin-dir "$CLAUDE_RECOVERY_PLUGIN_DIR"`);
     console.log('In Claude: /help → Custom commands → look for claude-recovery:recover');
     console.log('If the slash command is missing, use the Step 4 recover paste in demo/PROMPTS.md');
     console.log('Follow: demo/RECORDING.md');

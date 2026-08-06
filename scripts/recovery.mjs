@@ -747,7 +747,7 @@ function shortSha(sha) {
 function launchInstructions(cwd, manifestPath) {
   const manifest = readJson(manifestPath);
   const wtPath = manifest.worktreePath ?? '<worktree-path>';
-  const pluginDir = resolve(__dirname, '..');
+  const pluginDir = process.env.CLAUDE_RECOVERY_PLUGIN_DIR || resolve(__dirname, '..');
   const worktreeContractPath = join(wtPath, RECOVERY_DIR, 'pending-contract.json');
   const sourceContractPath = join(recoveryRoot(cwd), 'pending-contract.json');
   const contractPath = existsSync(worktreeContractPath)

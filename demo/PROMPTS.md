@@ -12,13 +12,15 @@ Read **SAY** lines word for word. Paste/type exactly as shown. Stay silent where
 ```bash
 cd ~/claude-recovery
 npm run demo:reset
+npm run plugin:zip
 npm run demo:preflight
 npm run demo
+export CLAUDE_RECOVERY_PLUGIN_DIR=~/claude-recovery/dist/claude-recovery.zip
 ```
 
 Start Loom. Open this file beside the terminal.
 
-**Before Step 0:** In Claude, run `/help` → **Custom commands**. You should see `claude-recovery:recover`. If not, relaunch with an absolute `--plugin-dir` path and avoid `--resume`. Step 4 includes a paste fallback that works without the slash command.
+**Before Step 0:** Launch with the **plugin zip** (fixes missing slash commands on some Claude Code builds). In Claude, run `/help` → **Custom commands** → `claude-recovery:recover`. Step 4 also has a paste fallback.
 
 ---
 
@@ -28,7 +30,8 @@ Start Loom. Open this file beside the terminal.
 
 **TYPE:**
 ```bash
-cd ~/claude-recovery/.demo/auth-service && claude --plugin-dir ~/claude-recovery
+export CLAUDE_RECOVERY_PLUGIN_DIR=~/claude-recovery/dist/claude-recovery.zip
+cd ~/claude-recovery/.demo/auth-service && claude --plugin-dir "$CLAUDE_RECOVERY_PLUGIN_DIR"
 ```
 
 **SEE:** Claude Code open; `pwd` ends in `.demo/auth-service`
@@ -197,7 +200,7 @@ git diff --name-only
 
 **TYPE** (no `-p`):
 ```bash
-cd '<worktree-from-receipt>' && claude --plugin-dir ~/claude-recovery
+cd '<worktree-from-receipt>' && claude --plugin-dir "$CLAUDE_RECOVERY_PLUGIN_DIR"
 ```
 
 **WAIT** until new Claude session is ready
@@ -296,7 +299,7 @@ git diff --name-only
 [SAY] Last step — a fresh Claude session in that worktree. SessionStart should inject the approved contract. I'm not asking it to implement yet; I just want it to restate the boundary.
 
 [TYPE]
-cd '<worktree-from-receipt>' && claude --plugin-dir ~/claude-recovery
+cd '<worktree-from-receipt>' && claude --plugin-dir "$CLAUDE_RECOVERY_PLUGIN_DIR"
 
 [PASTE into new Claude]
 Before editing, summarize the implementation boundary and required verification.

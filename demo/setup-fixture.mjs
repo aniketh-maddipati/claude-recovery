@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { setupFixtureSandbox, ROOT } from '../tests/harness/scenario-e2e.mjs';
 import { getDemoScenario, listDemoScenarios } from './scenarios.mjs';
+import { PLUGIN_ZIP, buildPluginZip } from '../scripts/build-plugin-zip.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const DEMO_ROOT = join(ROOT, '.demo');
@@ -102,8 +103,17 @@ export function setupDemoFixture({ scenario: scenarioName = 'auth-service', rese
   stripDemoSessionArtifacts(fixture);
   assertHonestDemoFixture(fixture);
 
-  const pluginDir = process.env.CLAUDE_RECOVERY_PLUGIN_DIR || ROOT;
+  let pluginZipPath = existsSync(PLUGIN_ZIP) ? PLUGIN_ZIP : null;
+  try {
+    pluginZipPath = buildPluginZip({ quiet: true }).path;
+  } catch {
+    // zip optional when `zip` is not installed; directory launch still works
+  }
+
+  const pluginDir =
+    process.env.CLAUDE_RECOVERY_PLUGIN_DIR || pluginZipPath || ROOT;
   const launchCommand = `cd ${fixture} && claude --plugin-dir ${pluginDir}`;
+  const directoryLaunchCommand = `cd ${fixture} && claude --plugin-dir ${ROOT}`;
 
   return {
     ok: true,
@@ -119,7 +129,9 @@ export function setupDemoFixture({ scenario: scenarioName = 'auth-service', rese
     fixture,
     cleanBaseSha,
     pluginDir,
+    pluginZipPath,
     launchCommand,
+    directoryLaunchCommand,
     reused: false,
     evidencePaste: scenario.evidencePaste,
     decisionPaste: scenario.decisionPaste,
@@ -156,11 +168,15 @@ function printDemoInstructions(result) {
 Demo ready: ${result.fixture}
 Teleprompter: demo/PROMPTS.md
 
-Launch (FIXTURE):
+Launch (FIXTURE) — plugin zip (recommended):
 ${indentBlock(result.launchCommand)}
 
-Before recording: run /help → Custom commands. Look for claude-recovery:recover.
-If missing, use the recover paste below (Step 4) instead of the slash command.
+${result.pluginZipPath && result.launchCommand !== result.directoryLaunchCommand
+    ? `Launch (FIXTURE) — directory fallback:\n${indentBlock(result.directoryLaunchCommand)}\n`
+    : ''}Before recording:
+  export CLAUDE_RECOVERY_PLUGIN_DIR='${result.pluginDir}'
+  In Claude: /help → Custom commands → claude-recovery:recover
+  If missing, use the recover paste below (Step 4).
 
 ── Paste into Claude (FIXTURE) ──
 

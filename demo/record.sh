@@ -5,7 +5,11 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-PLUGIN_DIR="${CLAUDE_RECOVERY_PLUGIN_DIR:-$ROOT}"
+echo "==> Build plugin zip"
+npm run plugin:zip --silent
+PLUGIN_ZIP="$ROOT/dist/claude-recovery.zip"
+PLUGIN_DIR="${CLAUDE_RECOVERY_PLUGIN_DIR:-$PLUGIN_ZIP}"
+export CLAUDE_RECOVERY_PLUGIN_DIR="$PLUGIN_DIR"
 FIXTURE="$ROOT/.demo/auth-service"
 PROMPTS="$ROOT/demo/PROMPTS.md"
 LAUNCH_CLAUDE=0
@@ -18,8 +22,11 @@ for arg in "$@"; do
 Usage: ./demo/record.sh [--launch]
 
   1. npm run demo:preflight
-  2. Builds fixture + prints paste/type sequence
+  2. Builds plugin zip + fixture + prints paste/type sequence
   3. Open demo/PROMPTS.md for the teleprompter
+
+Uses dist/claude-recovery.zip for --plugin-dir (Claude Code 2.1.128+).
+Export CLAUDE_RECOVERY_PLUGIN_DIR is set for receipt launch lines.
 
 Record with Loom. Open demo/PROMPTS.md beside the terminal.
 EOF

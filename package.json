@@ -18,6 +18,7 @@
     "demo:reset": "node -e \"import { rmSync } from 'node:fs'; rmSync('.demo', { recursive: true, force: true }); console.log('Removed .demo/');\"",
     "demo:record": "bash demo/record.sh",
     "demo:preflight": "node demo/preflight.mjs",
+    "plugin:zip": "node scripts/build-plugin-zip.mjs",
     "demo:receipt": "node demo/receipt.mjs",
     "demo:config": "node demo/setup-fixture.mjs --scenario config-toggle --print",
     "demo:json": "node demo/setup-fixture.mjs",
