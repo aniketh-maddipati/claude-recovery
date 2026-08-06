@@ -89,6 +89,13 @@ export function setupDemoFixture({ scenario: scenarioName = 'auth-service', rese
   };
 }
 
+function indentBlock(text, prefix = '  ') {
+  return String(text)
+    .split('\n')
+    .map((line) => (line.length ? `${prefix}${line}` : ''))
+    .join('\n');
+}
+
 function printDemoInstructions(result) {
   const evidence =
     result.evidencePaste ||
@@ -109,40 +116,40 @@ Complete interactive sequence (paste in order)
 
 1) Launch Claude Code in the fixture (single terminal, 16–18 pt font):
 
-  ${result.launchCommand}
+${indentBlock(result.launchCommand)}
 
 2) Evidence prompt:
 
-  ${evidence}
+${indentBlock(evidence)}
 
 3) Recovery:
 
-  /claude-recovery:recover
+${indentBlock('/claude-recovery:recover')}
 
 4) Decision:
 
-  ${result.decisionPaste}
+${indentBlock(result.decisionPaste)}
 
 5) Approval:
 
-  ${result.approvePaste}
+${indentBlock(result.approvePaste)}
 
 6) After finalize — compact receipt (optional; Claude may already show it):
 
-  node ${result.pluginDir}/scripts/recovery.mjs receipt \\
-    --manifest .claude/recovery/recovery-manifest.json
+${indentBlock(`node ${result.pluginDir}/scripts/recovery.mjs receipt \\
+  --manifest .claude/recovery/recovery-manifest.json`)}
 
 7) In the recovery worktree, confirm only approved files changed:
 
-  git diff --name-only
+${indentBlock('git diff --name-only')}
 
 8) Fresh interactive session (you launch manually — no -p):
 
-  <recommendedLaunchCommand from receipt>
+${indentBlock('<recommendedLaunchCommand from receipt>')}
 
 9) Fresh-session proof:
 
-  ${result.freshSessionPaste}
+${indentBlock(result.freshSessionPaste)}
 
 Expected fresh-session themes: preserve AuthProvider.authenticate(token);
 no ApiClient migration; use an adapter; run the compatibility test.
