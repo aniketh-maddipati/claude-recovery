@@ -288,7 +288,7 @@ export CLAUDE_RECOVERY_PLUGIN_DIR=~/Downloads/claude-recovery.zip
 claude --plugin-dir "$CLAUDE_RECOVERY_PLUGIN_DIR"
 ```
 
-Demo: `source demo/demo-env.sh && demo-go` then type `/claude-recovery:recover`.
+Demo: see `demo/PROMPTS.md` — export zip path, `claude --plugin-dir`, then `/claude-recovery:recover`.
 
 ```bash
 node /path/to/claude-recovery/scripts/run-manual-test.mjs

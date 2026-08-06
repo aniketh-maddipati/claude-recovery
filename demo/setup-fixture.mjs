@@ -159,47 +159,35 @@ function indentBlock(text, prefix = '  ') {
 }
 
 function printDemoInstructions(result) {
+  const wtHelper = `node ${join(ROOT, 'demo/demo-cmd.mjs')} worktree`;
+  const worktreeCmd = `cd "$(${wtHelper})" && git diff --name-only`;
+  const freshCmd = `cd "$(${wtHelper})" && claude --plugin-dir "$CLAUDE_RECOVERY_PLUGIN_DIR"`;
+
   console.log(`
 Demo ready: ${result.fixture}
 Teleprompter: demo/PROMPTS.md
+Plugin zip: ${result.pluginDir}
 
-Launch (FIXTURE) — plugin zip (recommended):
+── Run once ──
+export CLAUDE_RECOVERY_PLUGIN_DIR=${result.pluginDir}
+
+── Step 0 — fixture ──
 ${indentBlock(result.launchCommand)}
 
-${result.pluginZipPath && result.launchCommand !== result.directoryLaunchCommand
-    ? `Launch (FIXTURE) — directory fallback:\n${indentBlock(result.directoryLaunchCommand)}\n`
-    : ''}Short commands (type these on camera):
-  source demo/demo-env.sh
-  demo-go      Step 0 — Claude in FIXTURE
-  demo-wt      Step 7 — worktree diff (after receipt)
-  demo-fresh   Step 8 — fresh Claude in WORKTREE
+── TYPE into Claude ──
+3  ${result.evidencePaste}
+4  ${result.recoverPaste}
+5  ${result.decisionPaste}
+6  ${result.approvePaste}
 
-Before recording:
-  Plugin zip: ~/Downloads/claude-recovery.zip (built by npm run plugin:zip)
-  In Claude: /help → Custom commands → claude-recovery:recover
-  Step 4: type /claude-recovery:recover
+── Step 7 — worktree ──
+${indentBlock(worktreeCmd)}
 
-── TYPE into Claude (FIXTURE) ──
+── Step 8 — fresh Claude ──
+${indentBlock(freshCmd)}
+9  ${result.freshSessionPaste}
 
-3 Evidence:
-${indentBlock(result.evidencePaste)}
-
-4 Recover:
-${indentBlock(result.recoverPaste)}
-
-5 Decision (after keep/reject question):
-${indentBlock(result.decisionPaste)}
-
-6 Approve (after contract preview):
-${indentBlock(result.approvePaste)}
-
-── Terminal (WORKTREE) ──
-
-7 demo-wt
-8 demo-fresh
-9 TYPE: ${result.freshSessionPaste.trim()}
-
-Full teleprompter (SAY lines + timing): demo/PROMPTS.md
+Full teleprompter: demo/PROMPTS.md
 `);
 }
 

@@ -125,13 +125,11 @@ test('PROMPTS.md is the teleprompter with say, paste, and see cues', () => {
   const recording = readFileSync(join(ROOT, 'demo/RECORDING.md'), 'utf8');
   const script = readFileSync(join(ROOT, 'demo/SCRIPT.md'), 'utf8');
   assert.match(prompts, /Demo teleprompter/);
-  assert.match(prompts, /Type this \(cheat sheet\)/);
-  assert.match(prompts, /Teleprompter-only/);
+  assert.match(prompts, /Commands \(copy or type\)/);
   assert.match(prompts, /\*\*SAY:\*\*/);
   assert.match(prompts, /Run compat test and git diff --stat/);
-  assert.match(prompts, /demo-go/);
-  assert.match(prompts, /demo-wt/);
-  assert.match(prompts, /demo-fresh/);
+  assert.match(prompts, /claude --plugin-dir/);
+  assert.match(prompts, /demo-cmd\.mjs worktree/);
   assert.match(prompts, /\/claude-recovery:recover/);
   assert.match(prompts, /Reject AuthProvider and ApiClient migration/);
   assert.match(prompts, /Approve and finalize separately/i);
@@ -149,10 +147,8 @@ test('npm run demo prints short type prompts', () => {
   const out = `${result.stdout ?? ''}${result.stderr ?? ''}`;
   assert.match(out, /Run compat test and git diff --stat/);
   assert.match(out, /\/claude-recovery:recover/);
-  assert.match(out, /Reject AuthProvider and ApiClient migration/);
-  assert.match(out, /Approve and finalize separately/i);
-  assert.match(out, /Summarize boundary and verification before editing/);
-  assert.match(out, /demo-wt/);
+  assert.match(out, /demo-cmd\.mjs worktree/);
+  assert.match(out, /CLAUDE_RECOVERY_PLUGIN_DIR/);
 });
 
 test('demo/record.sh --help points at PROMPTS.md', () => {

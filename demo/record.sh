@@ -10,7 +10,6 @@ npm run plugin:zip --silent
 PLUGIN_ZIP="${CLAUDE_RECOVERY_PLUGIN_ZIP:-$HOME/Downloads/claude-recovery.zip}"
 PLUGIN_DIR="${CLAUDE_RECOVERY_PLUGIN_DIR:-$PLUGIN_ZIP}"
 export CLAUDE_RECOVERY_PLUGIN_DIR="$PLUGIN_DIR"
-export CLAUDE_RECOVERY_PLUGIN_ZIP="$PLUGIN_ZIP"
 FIXTURE="$ROOT/.demo/auth-service"
 PROMPTS="$ROOT/demo/PROMPTS.md"
 LAUNCH_CLAUDE=0
@@ -22,14 +21,11 @@ for arg in "$@"; do
       cat <<'EOF'
 Usage: ./demo/record.sh [--launch]
 
-  1. npm run demo:preflight
-  2. Builds plugin zip + fixture + prints paste/type sequence
-  3. Open demo/PROMPTS.md for the teleprompter
+  1. Builds ~/Downloads/claude-recovery.zip
+  2. npm run demo:preflight + fixture
+  3. Prints commands — see demo/PROMPTS.md
 
-Uses ~/Downloads/claude-recovery.zip for --plugin-dir (Claude Code 2.1.128+).
-Upload the same zip via /plugin if needed. Step 4: /claude-recovery:recover
-
-Record with Loom. Open demo/PROMPTS.md beside the terminal.
+Record with Loom.
 EOF
       exit 0
       ;;
@@ -43,23 +39,19 @@ echo ""
 echo "==> Build fixture"
 npm run demo
 
-LAUNCH="demo-go   # after: source demo/demo-env.sh"
-
 cat <<EOF
 
 ================================================================
-RECORD WITH LOOM — use demo/PROMPTS.md
+RECORD WITH LOOM — demo/PROMPTS.md
 ================================================================
 
-1) Start Loom (single terminal, 16–18 pt)
-2) source demo/demo-env.sh
-3) demo-go          (Step 0 — loads ~/Downloads/claude-recovery.zip)
-4) Follow demo/PROMPTS.md — slash /claude-recovery:recover at Step 4
-5) demo-wt            (Step 7 — after receipt)
-6) demo-fresh         (Step 8 — boundary summary, then stop)
+export CLAUDE_RECOVERY_PLUGIN_DIR="$PLUGIN_DIR"
+
+cd "$FIXTURE" && claude --plugin-dir "\$CLAUDE_RECOVERY_PLUGIN_DIR"
+
+Then follow demo/PROMPTS.md (slash /claude-recovery:recover at step 4)
 
 Plugin zip: $PLUGIN_ZIP
-
 Teleprompter: $PROMPTS
 ================================================================
 EOF
@@ -70,8 +62,7 @@ if [[ "$LAUNCH_CLAUDE" -eq 1 ]]; then
     exit 1
   fi
   echo ""
-  echo "==> Starting Claude in FIXTURE (start Loom first if you have not)"
-  # shellcheck source=demo/demo-env.sh
-  source "$ROOT/demo/demo-env.sh"
-  demo-go
+  echo "==> Starting Claude in FIXTURE"
+  cd "$FIXTURE"
+  exec claude --plugin-dir "$PLUGIN_DIR"
 fi

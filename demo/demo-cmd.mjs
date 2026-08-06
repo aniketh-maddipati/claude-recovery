@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Short demo helpers — worktree path, launch lines, env for demo-env.sh
+ * Demo helpers — worktree path and launch lines for pure shell commands.
  */
 
 import { existsSync, readFileSync } from 'node:fs';
