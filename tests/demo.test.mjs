@@ -10,7 +10,7 @@ import { listDemoScenarios } from '../demo/scenarios.mjs';
 import { ROOT, setupFixtureSandbox, cleanupScenario } from './harness/scenario-e2e.mjs';
 import { runRecovery } from './helpers.mjs';
 import { buildPluginZip } from '../scripts/build-plugin-zip.mjs';
-import { buildSkillZip, skillMarkdownForUpload, installSkillToCli } from '../scripts/build-skill-zip.mjs';
+import { buildSkillZip, skillMarkdownForUpload, skillMarkdownForCli, installSkillToCli, diagnoseSkillInstall } from '../scripts/build-skill-zip.mjs';
 
 for (const scenarioName of listDemoScenarios()) {
   test(`demo fixture ${scenarioName} is honest (diff + test, no seeded decision/commands)`, () => {
@@ -97,9 +97,11 @@ test('skill install copies recover skill to cli skills dir', () => {
   const target = join(ROOT, '.tmp-test', `skill-install-${Date.now()}`);
   mkdirSync(target, { recursive: true });
   try {
-    const installed = installSkillToCli({ targetDir: target });
+    const installed = installSkillToCli({ targetDir: target, quiet: true });
     assert.ok(existsSync(join(installed.path, 'SKILL.md')));
     assert.ok(existsSync(join(installed.path, 'scripts', 'recovery.mjs')));
+    const md = readFileSync(join(installed.path, 'SKILL.md'), 'utf8');
+    assert.match(md, /\$\{CLAUDE_SKILL_DIR\}\/scripts\//);
   } finally {
     rmSync(target, { recursive: true, force: true });
   }
@@ -115,6 +117,11 @@ test('skill upload zip has recover/SKILL.md at folder root', () => {
   const md = skillMarkdownForUpload();
   assert.match(md, /scripts\/recovery\.mjs capture/);
   assert.doesNotMatch(md, /\$\{CLAUDE_PLUGIN_ROOT\}/);
+});
+
+test('CLI skill markdown uses CLAUDE_SKILL_DIR', () => {
+  const md = skillMarkdownForCli();
+  assert.match(md, /\$\{CLAUDE_SKILL_DIR\}\/scripts\/recovery\.mjs capture/);
 });
 
 test('plugin zip contains recover skill and lands in Downloads', () => {

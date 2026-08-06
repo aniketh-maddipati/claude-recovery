@@ -21,6 +21,7 @@
     "plugin:zip": "node scripts/build-plugin-zip.mjs",
     "skill:zip": "node scripts/build-skill-zip.mjs",
     "skill:install": "node scripts/build-skill-zip.mjs --install",
+    "skill:doctor": "node scripts/build-skill-zip.mjs --doctor",
     "demo:receipt": "node demo/receipt.mjs",
     "demo:config": "node demo/setup-fixture.mjs --scenario config-toggle --print",
     "demo:json": "node demo/setup-fixture.mjs",
