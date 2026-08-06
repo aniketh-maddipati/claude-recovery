@@ -6,6 +6,9 @@
  *   recover/
  *     SKILL.md
  *     scripts/
+ *
+ * Dashboard upload (claude.ai Customize) does NOT sync to Claude Code CLI.
+ * Install locally: npm run skill:install  →  ~/.claude/skills/recover/
  */
 
 import {
@@ -27,6 +30,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export const ROOT = join(__dirname, '..');
 export const SKILL_FOLDER = 'recover';
 export const SKILL_ZIP_DOWNLOADS = join(homedir(), 'Downloads', 'claude-recovery.skill.zip');
+export const SKILL_INSTALL_DIR = join(homedir(), '.claude', 'skills');
 
 /** Scripts bundled into the upload skill (SKILL.md references these). */
 export const SKILL_SCRIPT_FILES = ['recovery.mjs', 'session-hook.mjs', 'setup-hooks.mjs'];
@@ -62,21 +66,41 @@ export function stageSkillFolder(destDir) {
 }
 
 function parseArgs(argv) {
-  const options = { output: null, quiet: false };
+  const options = { output: null, quiet: false, install: false };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--output' || arg === '-o') {
       options.output = argv[i + 1];
       i += 1;
     } else if (arg === '--quiet' || arg === '-q') options.quiet = true;
+    else if (arg === '--install') options.install = true;
   }
   return options;
 }
 
-export function buildSkillZip({ quiet = false, output = null } = {}) {
+function requireZip() {
   if (!spawnSync('sh', ['-c', 'command -v zip'], { encoding: 'utf8' }).stdout.trim()) {
     throw new Error('zip not found on PATH');
   }
+}
+
+export function installSkillToCli({ targetDir = SKILL_INSTALL_DIR } = {}) {
+  const staging = mkdtempSync(join(tmpdir(), 'claude-recovery-skill-'));
+  try {
+    stageSkillFolder(staging);
+    const skillRoot = join(staging, SKILL_FOLDER);
+    const dest = join(targetDir, SKILL_FOLDER);
+    rmSync(dest, { recursive: true, force: true });
+    mkdirSync(targetDir, { recursive: true });
+    cpSync(skillRoot, dest, { recursive: true });
+    return { ok: true, path: dest };
+  } finally {
+    rmSync(staging, { recursive: true, force: true });
+  }
+}
+
+export function buildSkillZip({ quiet = false, output = null } = {}) {
+  requireZip();
 
   const dest = output ?? process.env.CLAUDE_RECOVERY_SKILL_ZIP ?? SKILL_ZIP_DOWNLOADS;
   const staging = mkdtempSync(join(tmpdir(), 'claude-recovery-skill-'));
@@ -104,10 +128,17 @@ export function buildSkillZip({ quiet = false, output = null } = {}) {
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   try {
     const options = parseArgs(process.argv.slice(2));
-    const result = buildSkillZip({ quiet: true, output: options.output });
-    console.log(result.path);
+    if (options.install) {
+      buildSkillZip({ quiet: true, output: options.output });
+      const installed = installSkillToCli();
+      console.log(installed.path);
+      console.log('Restart Claude Code, then type /recover or run /skills to confirm.');
+    } else {
+      const result = buildSkillZip({ quiet: true, output: options.output });
+      console.log(result.path);
+    }
   } catch (err) {
-    console.error(`skill zip build failed: ${err.message}`);
+    console.error(`skill zip failed: ${err.message}`);
     process.exit(1);
   }
 }

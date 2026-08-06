@@ -280,7 +280,15 @@ claude --plugin-dir /path/to/claude-recovery
 
 If `/claude-recovery:recover` is unknown, paste the Step 4 recover prompt from [`demo/PROMPTS.md`](demo/PROMPTS.md) (reads `skills/recover/SKILL.md` with explicit script paths). The plugin also ships `commands/recover.md` as a fallback registration path.
 
-**Plugin zip (recommended):** builds to `~/Downloads/claude-recovery.zip`. Claude Code 2.1.128+ accepts it via `--plugin-dir`; upload the same file via `/plugin` if needed.
+**Plugin zip (demo — hooks + `/claude-recovery:recover`):** `npm run plugin:zip` → `~/Downloads/claude-recovery.zip`
+
+**Skill (dashboard upload ≠ CLI):** Dashboard skills sync to claude.ai/Cowork only, not Claude Code CLI. Install locally:
+
+```bash
+npm run skill:install   # → ~/.claude/skills/recover/  then restart Claude Code, type /recover
+```
+
+Or use the full plugin in CLI:
 
 ```bash
 npm run plugin:zip
@@ -288,7 +296,7 @@ export CLAUDE_RECOVERY_PLUGIN_DIR=~/Downloads/claude-recovery.zip
 claude --plugin-dir "$CLAUDE_RECOVERY_PLUGIN_DIR"
 ```
 
-Demo: see `demo/PROMPTS.md` — export zip path, `claude --plugin-dir`, then `/claude-recovery:recover`.
+Demo: see `demo/PROMPTS.md` — `/claude-recovery:recover` with plugin zip.
 
 ```bash
 node /path/to/claude-recovery/scripts/run-manual-test.mjs

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -10,7 +10,7 @@ import { listDemoScenarios } from '../demo/scenarios.mjs';
 import { ROOT, setupFixtureSandbox, cleanupScenario } from './harness/scenario-e2e.mjs';
 import { runRecovery } from './helpers.mjs';
 import { buildPluginZip } from '../scripts/build-plugin-zip.mjs';
-import { buildSkillZip, skillMarkdownForUpload } from '../scripts/build-skill-zip.mjs';
+import { buildSkillZip, skillMarkdownForUpload, installSkillToCli } from '../scripts/build-skill-zip.mjs';
 
 for (const scenarioName of listDemoScenarios()) {
   test(`demo fixture ${scenarioName} is honest (diff + test, no seeded decision/commands)`, () => {
@@ -91,6 +91,18 @@ test('setupDemoFixture strips stale commands.jsonl from a previous rehearsal', (
   writeFileSync(join(result.fixture, '.claude/recovery/commands.jsonl'), '{"rehearsal":true}\n');
   stripDemoSessionArtifacts(result.fixture);
   assert.doesNotThrow(() => assertHonestDemoFixture(result.fixture));
+});
+
+test('skill install copies recover skill to cli skills dir', () => {
+  const target = join(ROOT, '.tmp-test', `skill-install-${Date.now()}`);
+  mkdirSync(target, { recursive: true });
+  try {
+    const installed = installSkillToCli({ targetDir: target });
+    assert.ok(existsSync(join(installed.path, 'SKILL.md')));
+    assert.ok(existsSync(join(installed.path, 'scripts', 'recovery.mjs')));
+  } finally {
+    rmSync(target, { recursive: true, force: true });
+  }
 });
 
 test('skill upload zip has recover/SKILL.md at folder root', () => {
