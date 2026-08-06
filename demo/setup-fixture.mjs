@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { setupFixtureSandbox, ROOT } from '../tests/harness/scenario-e2e.mjs';
 import { getDemoScenario, listDemoScenarios } from './scenarios.mjs';
-import { PLUGIN_ZIP, buildPluginZip } from '../scripts/build-plugin-zip.mjs';
+import { buildPluginZip, defaultPluginZipPath } from '../scripts/build-plugin-zip.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const DEMO_ROOT = join(ROOT, '.demo');
@@ -103,7 +103,7 @@ export function setupDemoFixture({ scenario: scenarioName = 'auth-service', rese
   stripDemoSessionArtifacts(fixture);
   assertHonestDemoFixture(fixture);
 
-  let pluginZipPath = existsSync(PLUGIN_ZIP) ? PLUGIN_ZIP : null;
+  let pluginZipPath = existsSync(defaultPluginZipPath()) ? defaultPluginZipPath() : null;
   try {
     pluginZipPath = buildPluginZip({ quiet: true }).path;
   } catch {
@@ -180,18 +180,19 @@ ${result.pluginZipPath && result.launchCommand !== result.directoryLaunchCommand
   demo-fresh   Step 8 — fresh Claude in WORKTREE
 
 Before recording:
-  In Claude: /help → Custom commands → claude-recovery:recover (optional)
-  If missing, use the recover paste below (Step 4).
+  Plugin zip: ~/Downloads/claude-recovery.zip (built by npm run plugin:zip)
+  In Claude: /help → Custom commands → claude-recovery:recover
+  Step 4: type /claude-recovery:recover
 
-── Paste into Claude (FIXTURE) ──
+── Paste / type into Claude (FIXTURE) ──
 
 1) Evidence — paste first:
 ${indentBlock(evidence)}
 
-2) Recover — paste next; WAIT until Claude asks what to keep/reject/change:
+2) Recover — TYPE (slash command):
 ${indentBlock(result.recoverPaste)}
 
-  (Optional slash if /help lists it: /claude-recovery:recover)
+  WAIT until Claude asks what to keep/reject/change.
 
 3) Decision — paste ONLY after Claude asks the keep/reject question:
 ${indentBlock(result.decisionPaste)}

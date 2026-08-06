@@ -280,15 +280,15 @@ claude --plugin-dir /path/to/claude-recovery
 
 If `/claude-recovery:recover` is unknown, paste the Step 4 recover prompt from [`demo/PROMPTS.md`](demo/PROMPTS.md) (reads `skills/recover/SKILL.md` with explicit script paths). The plugin also ships `commands/recover.md` as a fallback registration path.
 
-**Plugin zip (recommended for `--plugin-dir`):** Claude Code 2.1.128+ accepts a zip archive; some builds register skills more reliably than a directory path.
+**Plugin zip (recommended):** builds to `~/Downloads/claude-recovery.zip`. Claude Code 2.1.128+ accepts it via `--plugin-dir`; upload the same file via `/plugin` if needed.
 
 ```bash
 npm run plugin:zip
-export CLAUDE_RECOVERY_PLUGIN_DIR=/path/to/claude-recovery/dist/claude-recovery.zip
+export CLAUDE_RECOVERY_PLUGIN_DIR=~/Downloads/claude-recovery.zip
 claude --plugin-dir "$CLAUDE_RECOVERY_PLUGIN_DIR"
 ```
 
-You can also upload `dist/claude-recovery.zip` via Claude Code's `/plugin` install flow when local `--plugin-dir` misbehaves.
+Demo: `source demo/demo-env.sh && demo-go` then type `/claude-recovery:recover`.
 
 ```bash
 node /path/to/claude-recovery/scripts/run-manual-test.mjs

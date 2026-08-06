@@ -6,7 +6,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { demoFixturePath } from './setup-fixture.mjs';
-import { PLUGIN_ZIP } from '../scripts/build-plugin-zip.mjs';
+import { defaultPluginZipPath, buildPluginZip } from '../scripts/build-plugin-zip.mjs';
 import { ROOT } from '../tests/harness/scenario-e2e.mjs';
 
 const scenario = process.argv.includes('--scenario')
@@ -20,8 +20,9 @@ function pluginDir() {
   if (process.env.CLAUDE_RECOVERY_PLUGIN_DIR) {
     return process.env.CLAUDE_RECOVERY_PLUGIN_DIR;
   }
-  if (existsSync(PLUGIN_ZIP)) {
-    return PLUGIN_ZIP;
+  const zip = defaultPluginZipPath();
+  if (existsSync(zip)) {
+    return zip;
   }
   return ROOT;
 }

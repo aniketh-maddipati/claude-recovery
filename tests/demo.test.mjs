@@ -92,8 +92,9 @@ test('setupDemoFixture strips stale commands.jsonl from a previous rehearsal', (
   assert.doesNotThrow(() => assertHonestDemoFixture(result.fixture));
 });
 
-test('plugin zip contains recover skill and manifest', () => {
+test('plugin zip contains recover skill and lands in Downloads', () => {
   const result = buildPluginZip({ quiet: true });
+  assert.match(result.path, /Downloads/);
   const listing = spawnSync('unzip', ['-l', result.path], { encoding: 'utf8' });
   assert.equal(listing.status, 0, listing.stderr);
   const out = listing.stdout;
@@ -133,8 +134,8 @@ test('PROMPTS.md is the teleprompter with say, paste, and see cues', () => {
   assert.match(prompts, /demo-go/);
   assert.match(prompts, /demo-wt/);
   assert.match(prompts, /demo-fresh/);
-  assert.match(prompts, /Follow skills\/recover\/SKILL\.md/);
   assert.match(prompts, /\/claude-recovery:recover/);
+  assert.match(prompts, /TYPE into Claude/);
   assert.match(prompts, /Reject the AuthProvider interface change and ApiClient migration/);
   assert.match(prompts, /Run approve and finalize as separate steps/i);
   assert.match(prompts, /Before editing, summarize the implementation boundary/);
@@ -151,10 +152,7 @@ test('npm run demo prints paste/type sequence', () => {
   });
   assert.equal(result.status, 0, result.stderr);
   const out = `${result.stdout ?? ''}${result.stderr ?? ''}`;
-  assert.match(out, /claude-recovery\.zip|plugin zip \(recommended\)/i);
-  assert.match(out, /demo-go/);
-  assert.match(out, /demo-wt/);
-  assert.match(out, /Follow skills\/recover\/SKILL\.md|skills\/recover\/SKILL\.md/);
+  assert.match(out, /claude-recovery\.zip|Downloads|plugin zip/i);
   assert.match(out, /\/claude-recovery:recover/);
   assert.match(out, /Reject the AuthProvider interface change and ApiClient migration/);
   assert.match(out, /Run approve and finalize as separate steps/);

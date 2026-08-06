@@ -1,17 +1,22 @@
 #!/usr/bin/env node
 /**
- * Build dist/claude-recovery.zip for `claude --plugin-dir ./dist/claude-recovery.zip`.
- * Claude Code 2.1.128+ accepts zip archives; some builds register skills more reliably than a directory path.
+ * Build claude-recovery.zip for `claude --plugin-dir ~/Downloads/claude-recovery.zip`.
+ * Claude Code 2.1.128+ accepts zip archives; skills register more reliably than a directory path.
  */
 
 import { existsSync, mkdirSync, statSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const ROOT = join(__dirname, '..');
-export const PLUGIN_ZIP = join(ROOT, 'dist', 'claude-recovery.zip');
+export const PLUGIN_ZIP_DIST = join(ROOT, 'dist', 'claude-recovery.zip');
+export const PLUGIN_ZIP_DOWNLOADS = join(homedir(), 'Downloads', 'claude-recovery.zip');
+
+/** Default zip path for demo + upload. */
+export const PLUGIN_ZIP = PLUGIN_ZIP_DOWNLOADS;
 
 /** Paths at the plugin root that must ship inside the zip. */
 export const PLUGIN_ZIP_ENTRIES = [
@@ -23,7 +28,24 @@ export const PLUGIN_ZIP_ENTRIES = [
   'LICENSE',
 ];
 
-export function buildPluginZip({ quiet = false } = {}) {
+export function defaultPluginZipPath() {
+  return process.env.CLAUDE_RECOVERY_PLUGIN_ZIP || PLUGIN_ZIP_DOWNLOADS;
+}
+
+function parseArgs(argv) {
+  const options = { output: null, alsoDist: false, quiet: false };
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    if (arg === '--output' || arg === '-o') {
+      options.output = argv[i + 1];
+      i += 1;
+    } else if (arg === '--also-dist') options.alsoDist = true;
+    else if (arg === '--quiet' || arg === '-q') options.quiet = true;
+  }
+  return options;
+}
+
+function writeZip(dest, { quiet = false } = {}) {
   const missing = PLUGIN_ZIP_ENTRIES.filter((entry) => !existsSync(join(ROOT, entry)));
   if (missing.length > 0) {
     throw new Error(`missing plugin paths for zip: ${missing.join(', ')}`);
@@ -33,27 +55,39 @@ export function buildPluginZip({ quiet = false } = {}) {
     throw new Error('zip not found on PATH (install zip, or build the archive manually)');
   }
 
-  mkdirSync(join(ROOT, 'dist'), { recursive: true });
-  const args = quiet ? ['-qr', PLUGIN_ZIP, ...PLUGIN_ZIP_ENTRIES] : ['-r', PLUGIN_ZIP, ...PLUGIN_ZIP_ENTRIES];
+  mkdirSync(dirname(dest), { recursive: true });
+  const args = quiet ? ['-qr', dest, ...PLUGIN_ZIP_ENTRIES] : ['-r', dest, ...PLUGIN_ZIP_ENTRIES];
   const result = spawnSync('zip', args, { cwd: ROOT, encoding: 'utf8' });
   if (result.status !== 0) {
     throw new Error(result.stderr?.trim() || result.stdout?.trim() || `zip exit ${result.status}`);
   }
 
-  if (!existsSync(PLUGIN_ZIP)) {
-    throw new Error(`zip command succeeded but ${PLUGIN_ZIP} was not created`);
+  if (!existsSync(dest)) {
+    throw new Error(`zip command succeeded but ${dest} was not created`);
   }
 
-  return {
-    ok: true,
-    path: PLUGIN_ZIP,
-    bytes: statSync(PLUGIN_ZIP).size,
-  };
+  return { path: dest, bytes: statSync(dest).size };
+}
+
+export function buildPluginZip({ quiet = false, output = null, alsoDist = false } = {}) {
+  const primary = output ?? defaultPluginZipPath();
+  const built = writeZip(primary, { quiet });
+
+  if (alsoDist && primary !== PLUGIN_ZIP_DIST) {
+    writeZip(PLUGIN_ZIP_DIST, { quiet: true });
+  }
+
+  return { ok: true, path: built.path, bytes: built.bytes };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   try {
-    const result = buildPluginZip({ quiet: true });
+    const options = parseArgs(process.argv.slice(2));
+    const result = buildPluginZip({
+      quiet: true,
+      output: options.output,
+      alsoDist: options.alsoDist,
+    });
     console.log(result.path);
   } catch (err) {
     console.error(`plugin zip build failed: ${err.message}`);

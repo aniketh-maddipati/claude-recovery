@@ -76,9 +76,12 @@ function main() {
     return path;
   }));
 
-  rows.push(check('plugin zip builds', () => {
+  rows.push(check('plugin zip builds to Downloads', () => {
     const result = buildPluginZip({ quiet: true });
-    if (!existsSync(result.path)) throw new Error('dist/claude-recovery.zip missing after build');
+    if (!existsSync(result.path)) throw new Error('plugin zip missing after build');
+    if (!result.path.includes('Downloads')) {
+      throw new Error(`expected Downloads path, got ${result.path}`);
+    }
     return `${result.path} (${result.bytes} bytes)`;
   }));
 
@@ -152,6 +155,7 @@ function main() {
   if (failed.length === 0) {
     console.log('All checks passed.');
     console.log(`Next: npm run demo`);
+    console.log('Plugin zip: ~/Downloads/claude-recovery.zip');
     console.log('Then: source demo/demo-env.sh && demo-go');
     console.log('In Claude: /help → Custom commands → look for claude-recovery:recover');
     console.log('If the slash command is missing, use the Step 4 recover paste in demo/PROMPTS.md');

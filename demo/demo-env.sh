@@ -12,7 +12,7 @@ _DEMO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 _DEMO_CMD="node \"$_DEMO_ROOT/demo/demo-cmd.mjs\""
 
 export CR="$_DEMO_ROOT"
-export CLAUDE_RECOVERY_PLUGIN_DIR="${CLAUDE_RECOVERY_PLUGIN_DIR:-$CR/dist/claude-recovery.zip}"
+export CLAUDE_RECOVERY_PLUGIN_DIR="${CLAUDE_RECOVERY_PLUGIN_DIR:-$HOME/Downloads/claude-recovery.zip}"
 
 _eval_demo() {
   # shellcheck disable=SC2086

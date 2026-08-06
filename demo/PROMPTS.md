@@ -18,13 +18,13 @@ Same via npm: `npm run demo:go` · `npm run demo:wt` · `npm run demo:fresh`
 
 ```bash
 cd ~/claude-recovery
-npm run demo:record
+npm run demo:record          # builds ~/Downloads/claude-recovery.zip
 source demo/demo-env.sh
 ```
 
 Start Loom. Open this file beside the terminal.
 
-**Before Step 0:** `/help` → Custom commands → `claude-recovery:recover` (optional). Step 4 paste works without slash.
+**Before Step 0:** Confirm `/help` → Custom commands lists `claude-recovery:recover`. `demo-go` loads the zip from `~/Downloads`.
 
 ---
 
@@ -99,18 +99,10 @@ Do not edit anything. Stop after reporting the observable failure and changed fi
 **SAY:**
 > I'm invoking recover. It captures Git state and command evidence, then asks me what to keep and reject.
 
-**PASTE into Claude:**
+**TYPE into Claude:**
 ```
-Follow skills/recover/SKILL.md.
-
-Run capture and inspect (scripts/recovery.mjs).
-
-Show the compact labeled current-attempt view, then ask: What should the next attempt keep, reject, or change?
-
-Stop before writing decision.json or running approve/finalize.
+/claude-recovery:recover
 ```
-
-**Or slash:** `/claude-recovery:recover`
 
 **WAIT**
 
@@ -248,8 +240,7 @@ Do not edit anything. Stop after reporting the observable failure and changed fi
 
 [SAY] I'm invoking recover. It captures Git state and command evidence, then asks me what to keep and reject.
 
-[PASTE]
-Follow skills/recover/SKILL.md. Run capture and inspect (scripts/recovery.mjs). Show labeled evidence and ask what to keep, reject, or change. Stop before decision or finalize.
+[TYPE] /claude-recovery:recover
 
 [WAIT — SEE evidence + keep/reject question]
 

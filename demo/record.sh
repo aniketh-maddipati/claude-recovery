@@ -5,11 +5,12 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-echo "==> Build plugin zip"
+echo "==> Build plugin zip → ~/Downloads/claude-recovery.zip"
 npm run plugin:zip --silent
-PLUGIN_ZIP="$ROOT/dist/claude-recovery.zip"
+PLUGIN_ZIP="${CLAUDE_RECOVERY_PLUGIN_ZIP:-$HOME/Downloads/claude-recovery.zip}"
 PLUGIN_DIR="${CLAUDE_RECOVERY_PLUGIN_DIR:-$PLUGIN_ZIP}"
 export CLAUDE_RECOVERY_PLUGIN_DIR="$PLUGIN_DIR"
+export CLAUDE_RECOVERY_PLUGIN_ZIP="$PLUGIN_ZIP"
 FIXTURE="$ROOT/.demo/auth-service"
 PROMPTS="$ROOT/demo/PROMPTS.md"
 LAUNCH_CLAUDE=0
@@ -25,8 +26,8 @@ Usage: ./demo/record.sh [--launch]
   2. Builds plugin zip + fixture + prints paste/type sequence
   3. Open demo/PROMPTS.md for the teleprompter
 
-Uses dist/claude-recovery.zip for --plugin-dir (Claude Code 2.1.128+).
-Export CLAUDE_RECOVERY_PLUGIN_DIR is set for receipt launch lines.
+Uses ~/Downloads/claude-recovery.zip for --plugin-dir (Claude Code 2.1.128+).
+Upload the same zip via /plugin if needed. Step 4: /claude-recovery:recover
 
 Record with Loom. Open demo/PROMPTS.md beside the terminal.
 EOF
@@ -52,10 +53,12 @@ RECORD WITH LOOM — use demo/PROMPTS.md
 
 1) Start Loom (single terminal, 16–18 pt)
 2) source demo/demo-env.sh
-3) demo-go          (Step 0 — Claude in FIXTURE)
-4) Follow demo/PROMPTS.md — SAY lines + paste prompts
+3) demo-go          (Step 0 — loads ~/Downloads/claude-recovery.zip)
+4) Follow demo/PROMPTS.md — slash /claude-recovery:recover at Step 4
 5) demo-wt            (Step 7 — after receipt)
 6) demo-fresh         (Step 8 — boundary summary, then stop)
+
+Plugin zip: $PLUGIN_ZIP
 
 Teleprompter: $PROMPTS
 ================================================================
