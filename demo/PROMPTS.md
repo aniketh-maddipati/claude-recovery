@@ -1,132 +1,110 @@
 # Demo prompts (copy-paste)
 
-Use this file during Loom recordings. Every block matches the implemented recover → preview → approve → finalize flow.
+Primary HN scenario: **auth-service**. Paste these blocks in order during a Loom recording.
 
 **Setup:**
 
 ```bash
 npm run demo:preflight
-npm run demo                              # auth-service (primary HN demo)
-npm run demo:config                       # config-toggle (simpler story)
+npm run demo
 ```
 
 Then run the printed interactive `cd ... && claude --plugin-dir ...` command.
 
-The fixture is a **deterministic mixed-attempt overlay**. It is not live proof of independent instruction violation. `decision.json` and `commands.jsonl` start absent.
+`npm run demo` prints this full sequence. The fixture is a **deterministic mixed-attempt overlay**. It is not live proof of independent instruction violation. `decision.json` and `commands.jsonl` start absent.
 
 ---
 
-## Primary scenario — auth-service (60–75 sec)
+## Primary scenario — auth-service
 
-### Story (say this on camera)
+### Evidence prompt
 
-> This attempt changed two public interfaces, but also produced a useful compatibility test and an expired-token finding. Recovery keeps only what we approve.
+```
+Run `node --test tests/auth-compat.test.mjs` and show `git diff --stat`.
 
-### Show the problem
-
-```bash
-git diff --stat
-node --test tests/auth-compat.test.mjs
+Do not edit anything. Stop after reporting the observable failure and changed files.
 ```
 
-Run the failing test through Claude’s Bash tool when hooks are loaded so real PostToolUse evidence is captured.
-
-### Recovery flow — paste in order
-
-**1. Start recovery**
+### Recovery
 
 ```
 /claude-recovery:recover
 ```
 
-**2. When asked what to keep / reject / change**
+### Decision
 
 ```
 Keep the compatibility test and expired-token finding.
-Reject the AuthProvider and client migrations.
-Start clean and use an adapter.
+
+Reject the AuthProvider interface change and ApiClient migration.
+
+Restart from the clean base, use an adapter, and require the compatibility test before completion.
 ```
 
-**3. When the contract preview looks right**
+### Approval
 
 ```
-Approved. Run approve, then finalize, then show the compact receipt and interactive launch command.
+Approved. Run approve and finalize as separate steps, then show the compact receipt.
 ```
 
-**4. After finalize — show receipt (or ask Claude to run it)**
-
-```bash
-node /path/to/claude-recovery/scripts/recovery.mjs receipt \
-  --manifest .claude/recovery/recovery-manifest.json
-```
-
-**5. In the new worktree (you start this manually — interactive, no `-p`)**
+### Fresh-session proof
 
 ```
-Summarize the implementation boundary before editing.
+Before editing, summarize the implementation boundary and required verification.
 ```
 
 Expected themes in the reply:
 
 - preserve `AuthProvider.authenticate(token)`
-- do not migrate `ApiClient`
+- no `ApiClient` migration
 - use an adapter
-- run `tests/auth-compat.test.mjs`
+- run `node --test tests/auth-compat.test.mjs`
+
+### After finalize (optional receipt / worktree check)
+
+```bash
+node /path/to/claude-recovery/scripts/recovery.mjs receipt \
+  --manifest .claude/recovery/recovery-manifest.json
+
+# in the recovery worktree
+git diff --name-only
+```
+
+Interactive launch (you start this manually — no `-p`):
+
+```bash
+cd '<worktree>' && claude --plugin-dir '<plugin-root>'
+```
 
 ---
 
-## Secondary scenario — config-toggle
+## Secondary — config-toggle and live simulation
 
-### Setup
+Not part of the primary HN cut.
+
+### config-toggle
 
 ```bash
 npm run demo:config
 ```
 
-### Decision
+Decision:
 
 ```
 Keep the smoke test and default-false finding. Reject the getConfig rename. Fresh session from clean base.
 ```
 
-### Approve
+Approval and fresh-session prompts match the primary scenario wording above (approve/finalize as separate steps; summarize boundary before editing).
 
-```
-Approved. Run approve, then finalize, then show the compact receipt and interactive launch command.
-```
+### Live simulation
 
-### Fresh session
-
-```
-Summarize the implementation boundary before editing.
-```
-
----
-
-## Live simulation (optional)
-
-Use only when you want to create the rejected attempt on camera. Prefer the deterministic fixture for the primary HN cut.
+Use only when you want to create the rejected attempt on camera. Prefer the deterministic fixture for the primary cut.
 
 ```bash
 npm run demo:live -- auth-service
 ```
 
-Paste the initial task from the printed instructions. If you need the rejected overlay shape for rehearsal, the printed nudge is **explicit demo setup** — do not imply it happened without instruction.
-
-Then run the failing test through Bash, invoke `/claude-recovery:recover`, and continue with the recovery prompts above.
-
----
-
-## Quick reference
-
-| Step | Prompt / command |
-|------|------------------|
-| Invoke | `/claude-recovery:recover` |
-| auth-service decision | Keep compat test + expired-token finding; reject AuthProvider + client migrations; adapter |
-| Approve | `Approved. Run approve, then finalize, then show the compact receipt and interactive launch command.` |
-| Fresh session | `Summarize the implementation boundary before editing.` |
-| Interactive launch | `cd '<worktree>' && claude --plugin-dir '<plugin-root>'` |
-| Headless fallback | same + `-p "$(cat .claude/recovery/recovery-contract.md)"` (non-interactive) |
+Paste the initial task from the printed instructions. If you need the rejected overlay shape for rehearsal, the printed nudge is **explicit demo setup** — do not imply it happened without instruction. Then run the evidence prompt through Bash, invoke `/claude-recovery:recover`, and continue with the primary recovery prompts.
 
 ---
 

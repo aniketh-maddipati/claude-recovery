@@ -72,6 +72,7 @@ export function setupDemoFixture({ scenario: scenarioName = 'auth-service', rese
     pluginDir,
     launchCommand,
     reused: false,
+    evidencePaste: scenario.evidencePaste,
     decisionPaste: scenario.decisionPaste,
     approvePaste: scenario.approvePaste,
     freshSessionPaste: scenario.freshSessionPaste,
@@ -89,47 +90,66 @@ export function setupDemoFixture({ scenario: scenarioName = 'auth-service', rese
 }
 
 function printDemoInstructions(result) {
+  const evidence =
+    result.evidencePaste ||
+    `Run \`${result.demoCommands.runCompatTest || result.demoCommands.runSmokeTest}\` and show \`git diff --stat\`.\n\n` +
+      'Do not edit anything. Stop after reporting the observable failure and changed files.';
+
   console.log(`
 Demo fixture ready (${result.scenario}): ${result.fixture}
 ${result.loomTitle} — ${result.oneLiner}
 
-This is a deterministic mixed-attempt fixture (not live Claude misbehavior).
+Deterministic mixed-attempt fixture (not live Claude misbehavior).
 Starting state: Git diff present, useful test present, commands.jsonl absent,
 decision.json absent, no recovery manifest / approved pending contract.
 
-Preflight (recommended):
+────────────────────────────────────────────────────────────────
+Complete interactive sequence (paste in order)
+────────────────────────────────────────────────────────────────
 
-  npm run demo:preflight
-
-Run this in a terminal with authenticated Claude Code (120% zoom, crop to active pane):
+1) Launch Claude Code in the fixture (single terminal, 16–18 pt font):
 
   ${result.launchCommand}
 
-During recording, run the failing compatibility test through Bash so the real
-PostToolUse hook can capture commands.jsonl. Then invoke:
+2) Evidence prompt:
+
+  ${evidence}
+
+3) Recovery:
 
   /claude-recovery:recover
 
-When asked what to keep/reject/change, paste:
+4) Decision:
 
   ${result.decisionPaste}
 
-When the contract preview looks right, explicitly approve. Claude should then run
-approve and finalize (separate steps). Show the compact receipt:
+5) Approval:
+
+  ${result.approvePaste}
+
+6) After finalize — compact receipt (optional; Claude may already show it):
 
   node ${result.pluginDir}/scripts/recovery.mjs receipt \\
     --manifest .claude/recovery/recovery-manifest.json
 
-Launch the fresh interactive session yourself (plugin cannot start Claude):
+7) In the recovery worktree, confirm only approved files changed:
 
-  <recommendedLaunchCommand from receipt — interactive, no -p>
+  git diff --name-only
 
-In the fresh session, paste:
+8) Fresh interactive session (you launch manually — no -p):
+
+  <recommendedLaunchCommand from receipt>
+
+9) Fresh-session proof:
 
   ${result.freshSessionPaste}
 
+Expected fresh-session themes: preserve AuthProvider.authenticate(token);
+no ApiClient migration; use an adapter; run the compatibility test.
+
+Recording cut (~68s): demo/RECORDING.md
 Copy-paste prompts: demo/PROMPTS.md
-Shot list (60–75 sec primary): demo/RECORDING.md`);
+Preflight (not for the final cut): npm run demo:preflight`);
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

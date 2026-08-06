@@ -1,13 +1,13 @@
-# Loom recording — primary 60–75 second cut
+# Loom recording — primary final cut (~68s)
 
-Prepare the deterministic mixed-attempt fixture:
+Prepare the deterministic auth-service fixture:
 
 ```bash
 npm run demo:preflight
 npm run demo
 ```
 
-This fixture overlays a rejected auth-service attempt on a clean base. It is **not** proof that Claude independently violated an instruction. Starting state:
+Starting state:
 
 ```text
 Git diff: present
@@ -18,82 +18,71 @@ recovery manifest: absent
 approved pending contract: absent
 ```
 
-**Prompts:** [`demo/PROMPTS.md`](PROMPTS.md)
+**Prompts:** [`demo/PROMPTS.md`](PROMPTS.md) · `npm run demo` prints the full paste sequence.
 
-Run the printed interactive launch command. Terminal: 120% zoom, crop to the active pane. Narrate or use captions.
+## Final cut sequence
 
-## Primary sequence (60–75 seconds)
+| Time | Action |
+|------|--------|
+| 0–8s | failing compatibility test + `git diff --stat` |
+| 8–18s | invoke `/claude-recovery:recover` and show observed evidence |
+| 18–27s | keep/reject/change decision |
+| 27–39s | readable Recovery Contract preview |
+| 39–49s | explicit approval + compact receipt |
+| 49–55s | `git diff --name-only` in recovery worktree |
+| 55–68s | fresh interactive session summarizes boundary |
 
 ### 0–8 seconds
 
-Show:
+In Claude, paste the evidence prompt (or run through Bash with hooks loaded):
 
-```bash
-git diff --stat
-node --test tests/auth-compat.test.mjs
+```
+Run `node --test tests/auth-compat.test.mjs` and show `git diff --stat`.
+
+Do not edit anything. Stop after reporting the observable failure and changed files.
 ```
 
-Caption:
+Overlay:
 
 ```text
-Two rejected API changes. One useful compatibility test.
+The implementation direction is rejected. The test is useful.
 ```
 
-The failing test must run through Bash in Claude Code (or with plugin hooks active) so the real PostToolUse hook can capture `commands.jsonl`. Do not pretape fake evidence.
-
 ### 8–18 seconds
-
-Invoke:
 
 ```text
 /claude-recovery:recover
 ```
 
-Show the observed evidence and the exact keep/reject/change question:
+Show observed evidence and the keep/reject/change question.
 
-```text
-What should the next attempt keep, reject, or change?
+### 18–27 seconds
+
 ```
-
-### 18–28 seconds
-
-Developer decision (type or paste):
-
-```text
 Keep the compatibility test and expired-token finding.
-Reject the AuthProvider and client migrations.
-Start clean and use an adapter.
+
+Reject the AuthProvider interface change and ApiClient migration.
+
+Restart from the clean base, use an adapter, and require the compatibility test before completion.
 ```
 
-### 28–40 seconds
-
-Show only the important Recovery Contract fields:
+Overlay:
 
 ```text
-KEEP
-tests/auth-compat.test.mjs
-expired-token finding
-
-DISCARD
-src/auth/provider.mjs
-src/clients/api-client.mjs
-
-NEXT
-clean base
-adapter approach
-run compatibility test
+Keep the evidence. Reject the migration.
 ```
 
-### 40–55 seconds
+### 27–39 seconds
 
-Explicitly approve. Claude must run **approve** then **finalize** as separate steps. Show the compact receipt:
+Show a readable Recovery Contract preview (KEEP / DISCARD / NEXT). Prefer the human-readable contract fields over raw JSON.
 
-```bash
-node /path/to/claude-recovery/scripts/recovery.mjs receipt \
-  --manifest .claude/recovery/recovery-manifest.json
+### 39–49 seconds
+
+```
+Approved. Run approve and finalize as separate steps, then show the compact receipt.
 ```
 
-Expected shape:
+Expected receipt shape:
 
 ```text
 RECOVERY READY
@@ -108,6 +97,8 @@ Launch manually
 cd '<worktree>' && claude --plugin-dir '<plugin-root>'
 ```
 
+### 49–55 seconds
+
 In the recovery worktree:
 
 ```bash
@@ -120,7 +111,13 @@ It should show only:
 tests/auth-compat.test.mjs
 ```
 
-### 55–75 seconds
+Overlay:
+
+```text
+Clean base. Only the approved test carries forward.
+```
+
+### 55–68 seconds
 
 Manually launch the **interactive** session (no `-p`):
 
@@ -130,34 +127,46 @@ cd '<worktree>' && claude --plugin-dir '<plugin-root>'
 
 Ask:
 
-```text
-Summarize the implementation boundary before editing.
+```
+Before editing, summarize the implementation boundary and required verification.
 ```
 
-The fresh session must identify:
+Expected content:
 
 - preserve `AuthProvider.authenticate(token)`
-- do not migrate `ApiClient`
+- no `ApiClient` migration
 - use an adapter
-- run `tests/auth-compat.test.mjs`
+- run `node --test tests/auth-compat.test.mjs`
 
-Do **not** wait for a full implementation in the demo.
+End the recording here. Do not wait for a second implementation.
 
-If SessionStart injection is unavailable in this environment, **stop and report the exact blocker**. Do not fake injection. Optional fallback (separately labeled): native `setup-hooks.mjs`, or headless `recommendedLaunchCommandHeadless` (`-p`, non-interactive), or manual paste.
+## Recording rules
 
-## 30-second cut (secondary)
+- Use Loom
+- Single terminal window
+- 16–18 pt terminal font
+- Trim model wait time; add a small “waits trimmed” note
+- Do not fake terminal output
+- Do not show installation or preflight in the final cut
+- Do not show raw JSON unless it is the only available output
+- Do not wait for the second implementation
+- End after the fresh session proves it received the contract
 
-| Time | Action | Caption |
-|------|--------|---------|
-| 0–5s | `git diff --stat` + failing compat test | Two rejected API changes. One useful test. |
-| 5–12s | `/claude-recovery:recover` + decision paste | Keep the test. Reject the migration. |
-| 12–20s | Approve → receipt → `git diff --name-only` in worktree | Only the approved test carries forward. |
-| 20–30s | Manual interactive launch + boundary summarize | Fresh session. Same boundary. |
+## Overlays (only these three)
 
-## Recording guardrails
+```text
+The implementation direction is rejected. The test is useful.
+
+Keep the evidence. Reject the migration.
+
+Clean base. Only the approved test carries forward.
+```
+
+## Guardrails
 
 - You start the fresh interactive session — the plugin cannot launch Claude or invoke `/clear`.
 - Do not describe `-p` as interactive.
 - Do not claim seeded `commands.jsonl` was hook-captured.
 - Final shot is valid only if SessionStart injects (check `injection-audit.jsonl`) **or** you clearly label a fallback path.
 - Discarded source files in the new worktree must remain byte-identical to the clean base.
+- If SessionStart injection is unavailable, **stop and report the exact blocker**. Do not fake injection.

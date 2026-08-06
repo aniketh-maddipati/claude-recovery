@@ -9,7 +9,7 @@ export const DEMO_SCENARIOS = {
   'auth-service': {
     id: 'auth-service',
     loomTitle: 'Selective salvage from a mixed Claude attempt',
-    oneLiner: 'Two rejected API changes. One useful compatibility test.',
+    oneLiner: 'The implementation direction is rejected. The test is useful.',
     story:
       'A Claude attempt changed AuthProvider and ApiClient, but also produced a useful ' +
       'compatibility test and an expired-token finding. Recovery keeps only the approved artifacts.',
@@ -20,14 +20,20 @@ export const DEMO_SCENARIOS = {
     approach: 'use an adapter',
     fixtureDir: 'auth-service',
     testCommand: 'node --test tests/auth-compat.test.mjs',
+    evidencePaste:
+      'Run `node --test tests/auth-compat.test.mjs` and show `git diff --stat`.\n' +
+      '\n' +
+      'Do not edit anything. Stop after reporting the observable failure and changed files.',
     decisionPaste:
       'Keep the compatibility test and expired-token finding.\n' +
-      'Reject the AuthProvider and client migrations.\n' +
-      'Start clean and use an adapter.',
+      '\n' +
+      'Reject the AuthProvider interface change and ApiClient migration.\n' +
+      '\n' +
+      'Restart from the clean base, use an adapter, and require the compatibility test before completion.',
     freshSessionPaste:
-      'Summarize the implementation boundary before editing.',
+      'Before editing, summarize the implementation boundary and required verification.',
     approvePaste:
-      'Approved. Run approve, then finalize, then show the compact receipt and interactive launch command.',
+      'Approved. Run approve and finalize as separate steps, then show the compact receipt.',
     demoCommands: {
       originalOutcome: 'cat .claude/recovery/original-outcome.json',
       diffStat: 'git diff --stat HEAD',
@@ -36,11 +42,11 @@ export const DEMO_SCENARIOS = {
       recoverSkill: '/claude-recovery:recover',
     },
     loomCaptions: {
-      problem: 'Two rejected API changes. One useful compatibility test.',
+      problem: 'The implementation direction is rejected. The test is useful.',
       evidence: 'Observed evidence from Git + the real failing test run.',
-      decision: 'Keep the test. Reject the migration.',
+      decision: 'Keep the evidence. Reject the migration.',
       contract: 'KEEP test + finding. DISCARD provider + client. NEXT: adapter.',
-      result: 'Only the approved compatibility test carries forward.',
+      result: 'Clean base. Only the approved test carries forward.',
       fresh: 'Fresh interactive session. Summarize the boundary before editing.',
     },
     liveSimulation: {
@@ -75,12 +81,16 @@ This nudge is explicit demo setup — not something to imply happened without in
     approach: 'wrap getConfig with a flag helper',
     fixtureDir: 'config-toggle',
     testCommand: 'node --test tests/config-smoke.test.mjs',
+    evidencePaste:
+      'Run `node --test tests/config-smoke.test.mjs` and show `git diff --stat`.\n' +
+      '\n' +
+      'Do not edit anything. Stop after reporting the observable failure and changed files.',
     decisionPaste:
       'Keep the smoke test and default-false finding. Reject the getConfig rename. Fresh session from clean base.',
     freshSessionPaste:
-      'Summarize the implementation boundary before editing.',
+      'Before editing, summarize the implementation boundary and required verification.',
     approvePaste:
-      'Approved. Run approve, then finalize, then show the compact receipt and interactive launch command.',
+      'Approved. Run approve and finalize as separate steps, then show the compact receipt.',
     demoCommands: {
       originalOutcome: 'cat .claude/recovery/original-outcome.json',
       diffStat: 'git diff --stat HEAD',

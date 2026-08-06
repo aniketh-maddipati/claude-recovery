@@ -90,12 +90,32 @@ test('PROMPTS.md and RECORDING.md match the implemented flow', () => {
   for (const name of listDemoScenarios()) {
     assert.match(prompts, new RegExp(name));
   }
-  assert.match(recording, /60|75/);
-  assert.match(recording, /Summarize the implementation boundary/);
-  assert.match(prompts, /approve, then finalize|Run approve/i);
+  assert.match(recording, /0–8s|0-8s/);
+  assert.match(recording, /55–68s|55-68s/);
+  assert.match(prompts, /Before editing, summarize the implementation boundary/);
+  assert.match(recording, /Before editing, summarize the implementation boundary/);
+  assert.match(prompts, /Run approve and finalize as separate steps/i);
+  assert.match(prompts, /Reject the AuthProvider interface change and ApiClient migration/);
   assert.match(prompts, /Do not pre-seed|commands\.jsonl.*absent|start absent/i);
+  assert.match(recording, /waits trimmed/i);
+  assert.match(recording, /The implementation direction is rejected\. The test is useful\./);
   assert.doesNotMatch(recording, /tail -n 2 \.claude\/recovery\/commands\.jsonl/);
   assert.doesNotMatch(prompts, /seedCommandsEvidence|hardcoded fake timestamps/i);
+});
+
+test('npm run demo prints the complete primary sequence', () => {
+  const result = spawnSync('npm', ['run', 'demo'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  });
+  assert.equal(result.status, 0, result.stderr);
+  const out = `${result.stdout ?? ''}${result.stderr ?? ''}`;
+  assert.match(out, /Complete interactive sequence/);
+  assert.match(out, /\/claude-recovery:recover/);
+  assert.match(out, /Reject the AuthProvider interface change and ApiClient migration/);
+  assert.match(out, /Run approve and finalize as separate steps/);
+  assert.match(out, /Before editing, summarize the implementation boundary/);
+  assert.match(out, /Do not edit anything\. Stop after reporting/);
 });
 
 test('preflight fails clearly when a required executable is missing', () => {

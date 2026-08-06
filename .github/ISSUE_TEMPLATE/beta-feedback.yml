@@ -1,0 +1,75 @@
+name: Beta feedback
+description: Feedback from trying the claude-recovery public beta
+title: "Beta feedback: "
+labels: ["beta-feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying the **claude-recovery** beta.
+
+        **Sanitize before attaching anything.** Strip or redact prompts, command
+        output, source code, tokens, API keys, and personal data from logs,
+        screenshots, and worktree paths. Artifacts under `.claude/recovery/` may
+        contain secrets.
+  - type: checkboxes
+    id: mixed-attempt
+    attributes:
+      label: Was the mixed-attempt case recognizable?
+      description: Later work contained both useful and rejected artifacts.
+      options:
+        - label: Yes — this matches a case I have hit
+        - label: Partially — similar but not exact
+        - label: No — I have not seen this case
+  - type: checkboxes
+    id: decision-clarity
+    attributes:
+      label: Was the keep/reject decision clear?
+      options:
+        - label: Yes
+        - label: Partially
+        - label: No
+  - type: checkboxes
+    id: effort
+    attributes:
+      label: Did this save effort versus manually reading the diff and writing a fresh prompt?
+      options:
+        - label: Yes — clearly less work
+        - label: About the same
+        - label: No — more work
+  - type: checkboxes
+    id: expected-builtin
+    attributes:
+      label: Did you expect rewind or branch to solve it?
+      options:
+        - label: Yes — I expected `/rewind`
+        - label: Yes — I expected `/branch` or `/fork`
+        - label: No — I already knew those were a different case
+  - type: checkboxes
+    id: whole-file
+    attributes:
+      label: Was whole-file selection sufficient?
+      options:
+        - label: Yes
+        - label: No — I needed hunk-level or finer selection
+  - type: textarea
+    id: friction
+    attributes:
+      label: Where did the flow fail or become cumbersome?
+      description: Steps, error messages, or UX friction. Sanitize logs first.
+      placeholder: e.g. approve/finalize confusion, SessionStart injection, worktree path…
+  - type: checkboxes
+    id: real-repo
+    attributes:
+      label: Would you use it on a real repository?
+      options:
+        - label: Yes
+        - label: Maybe — with changes
+        - label: No
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Optional. Sanitize before pasting.
+    validations:
+      required: false

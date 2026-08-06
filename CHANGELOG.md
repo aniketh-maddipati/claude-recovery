@@ -22,8 +22,14 @@ All notable changes to **claude-recovery** are documented here.
 - Native `setup-hooks.mjs` installer labeled as optional compatibility fallback
 - Skill flow is `capture → inspect` with separate approve and finalize steps
 - Demo fixture is an honest deterministic mixed-attempt overlay (no seeded `decision.json` / fake `commands.jsonl`)
-- README rewritten for HN legibility with built-in comparison table and privacy notes
+- README tightened for public beta (accurate rewind/branch distinction; tech reference below product explanation)
+- Primary demo/recording materials reduced to one auth-service HN scenario; `npm run demo` prints the full paste sequence
 - Version bumped to 0.1.2 across package and plugin manifests
+
+### Added (beta polish)
+
+- `.github/ISSUE_TEMPLATE/beta-feedback.yml` — sanitized beta feedback questionnaire
+- `docs/SHOW_HN.md` — short Show HN draft
 
 ### Fixed
 
