@@ -1,40 +1,79 @@
 # Demo cold-read card
 
-One file. Paste/type in order. No coding on camera.
+One file. Follow **Line-by-line** while recording. No coding on camera.
+
+---
 
 ## Setup (off camera)
 
 ```bash
 cd ~/claude-recovery
-npm run demo:reset          # if a rehearsal left commands.jsonl behind
+npm run demo:reset          # if preflight fails on commands.jsonl
 npm run demo:preflight
 npm run demo
 ```
 
-## Directories
-
 | Where | Path |
 |-------|------|
-| **FIXTURE** (Steps 1–4) | `~/claude-recovery/.demo/auth-service` |
-| **WORKTREE** (Steps 5–6) | `~/claude-recovery/.demo/auth-service/.claude/recovery-worktrees/<name-from-receipt>` |
-
-Check: `pwd`
+| **FIXTURE** | `~/claude-recovery/.demo/auth-service` |
+| **WORKTREE** | `~/claude-recovery/.demo/auth-service/.claude/recovery-worktrees/<name-from-receipt>` |
 
 ---
 
-## Launch (start Loom, then run)
+## Line-by-line (exact order)
 
-```bash
-cd ~/claude-recovery/.demo/auth-service && claude --plugin-dir ~/claude-recovery
-```
+### Step 0 — Launch
 
-Stay in **FIXTURE** until Step 5.
+| | |
+|---|---|
+| **WHERE** | Terminal → **FIXTURE** |
+| **TYPE** | `cd ~/claude-recovery/.demo/auth-service && claude --plugin-dir ~/claude-recovery` |
+| **SEE** | Claude Code open; `pwd` ends in `.demo/auth-service` |
+
+Start Loom before Step 0.
 
 ---
 
-## Paste into Claude — FIXTURE (in order)
+### Step 1 — Intro (optional)
 
-### 1 — Evidence
+| | |
+|---|---|
+| **WHERE** | **FIXTURE** (Claude session) |
+| **SAY** | Mixed attempt — reject the rename, keep the test. Recovering selectively, not rewinding. |
+| **PASTE** | — |
+| **SEE** | You in Claude; no recovery receipt yet |
+
+---
+
+### Step 2 — Context (optional)
+
+| | |
+|---|---|
+| **WHERE** | **FIXTURE** |
+| **SAY** | Fake mini app: login checker was renamed authenticate to verifyRequest. Useful guardrail test fails. Keeping the test. |
+| **PASTE** | — |
+| **SEE** | Same session |
+
+---
+
+### Step 3 — Evidence intro
+
+| | |
+|---|---|
+| **WHERE** | **FIXTURE** |
+| **SAY** | Failing test plus diff — that's the evidence. |
+| **PASTE** | — |
+| **SEE** | — |
+
+---
+
+### Step 4 — Evidence
+
+| | |
+|---|---|
+| **WHERE** | **FIXTURE** — paste into Claude |
+| **SAY** | *(silent while Claude works)* |
+| **PASTE** | |
 
 ```
 Run `node --test tests/auth-compat.test.mjs` and show `git diff --stat`.
@@ -42,13 +81,57 @@ Run `node --test tests/auth-compat.test.mjs` and show `git diff --stat`.
 Do not edit anything. Stop after reporting the observable failure and changed files.
 ```
 
-### 2 — Recover
+| **SEE** | Compat test **fails**; diff lists `src/auth/provider.mjs`, `src/clients/api-client.mjs`, `tests/auth-compat.test.mjs` |
+
+**Overlay:** `The implementation direction is rejected. The test is useful.`
+
+---
+
+### Step 5 — Recover intro
+
+| | |
+|---|---|
+| **WHERE** | **FIXTURE** |
+| **SAY** | Invoking recover. |
+| **PASTE** | — |
+| **SEE** | — |
+
+---
+
+### Step 6 — Recover
+
+| | |
+|---|---|
+| **WHERE** | **FIXTURE** — paste into Claude |
+| **SAY** | *(silent)* |
+| **PASTE** | |
 
 ```
 /claude-recovery:recover
 ```
 
-### 3 — Decision
+| **SEE** | Skill runs; observed evidence; question: *What should the next attempt keep, reject, or change?* |
+
+---
+
+### Step 7 — Decision intro
+
+| | |
+|---|---|
+| **WHERE** | **FIXTURE** |
+| **SAY** | Keep the test and finding. Reject the migration. Adapter on the next pass. |
+| **PASTE** | — |
+| **SEE** | — |
+
+---
+
+### Step 8 — Decision
+
+| | |
+|---|---|
+| **WHERE** | **FIXTURE** — paste into Claude |
+| **SAY** | *(silent)* |
+| **PASTE** | |
 
 ```
 Keep the compatibility test and expired-token finding.
@@ -58,15 +141,40 @@ Reject the AuthProvider interface change and ApiClient migration.
 Restart from the clean base, use an adapter, and require the compatibility test before completion.
 ```
 
-### 4 — Approve
+| **SEE** | Recovery Contract preview: **KEEP** test + finding · **DISCARD** provider + client · **NEXT** adapter + run test |
+
+**Overlay:** `Keep the evidence. Reject the migration.`
+
+---
+
+### Step 9 — Approve intro
+
+| | |
+|---|---|
+| **WHERE** | **FIXTURE** |
+| **SAY** | Contract looks right. Approving. |
+| **PASTE** | — |
+| **SEE** | Contract on screen |
+
+---
+
+### Step 10 — Approve
+
+| | |
+|---|---|
+| **WHERE** | **FIXTURE** — paste into Claude |
+| **SAY** | *(silent)* |
+| **PASTE** | |
 
 ```
 Approved. Run approve and finalize as separate steps, then show the compact receipt.
 ```
 
-Copy the `cd '…' && claude --plugin-dir '…'` line from the receipt.
+| **SEE** | Receipt: `RECOVERY READY` · Kept `tests/auth-compat.test.mjs` · Boundary `PASS` · Launch line |
 
-**Receipt fallback** (paste into Claude if needed):
+Copy the `cd '…' && claude --plugin-dir '…'` line from receipt.
+
+**If no receipt, PASTE into Claude:**
 
 ```
 node ~/claude-recovery/scripts/recovery.mjs receipt --manifest .claude/recovery/recovery-manifest.json
@@ -74,63 +182,133 @@ node ~/claude-recovery/scripts/recovery.mjs receipt --manifest .claude/recovery/
 
 ---
 
-## Type in terminal — WORKTREE
+### Step 11 — Worktree check intro
+
+| | |
+|---|---|
+| **WHERE** | Leave **FIXTURE** → go to **WORKTREE** |
+| **SAY** | Only the approved test should differ from the clean base. |
+| **PASTE** | — |
+| **SEE** | — |
+
+---
+
+### Step 12 — Worktree check
+
+| | |
+|---|---|
+| **WHERE** | Terminal → **WORKTREE** |
+| **SAY** | *(silent)* |
+| **TYPE** | |
 
 ```bash
 cd ~/claude-recovery/.demo/auth-service/.claude/recovery-worktrees/<name-from-receipt>
 git diff --name-only
 ```
 
-Expect only:
+| **SEE** | Only `tests/auth-compat.test.mjs` |
 
-```text
-tests/auth-compat.test.mjs
-```
+**Overlay:** `Clean base. Only the approved test carries forward.`
 
 ---
 
-## Launch fresh Claude — WORKTREE
+### Step 13 — Fresh session intro
 
-Paste the launch line from the receipt (interactive, no `-p`):
+| | |
+|---|---|
+| **WHERE** | Terminal → **WORKTREE** |
+| **SAY** | Fresh session — summarize the boundary, don't implement yet. |
+| **PASTE** | — |
+| **SEE** | — |
+
+---
+
+### Step 14 — Launch fresh Claude
+
+| | |
+|---|---|
+| **WHERE** | Terminal → **WORKTREE** |
+| **SAY** | *(silent)* |
+| **TYPE** | Launch line from receipt (no `-p`): |
 
 ```bash
 cd '<worktree-from-receipt>' && claude --plugin-dir ~/claude-recovery
 ```
 
+| **SEE** | New Claude session; `pwd` is **WORKTREE**, not FIXTURE |
+
 ---
 
-## Paste into Claude — WORKTREE (fresh session)
+### Step 15 — Fresh session proof
+
+| | |
+|---|---|
+| **WHERE** | **WORKTREE** — paste into **new** Claude session |
+| **SAY** | *(silent)* |
+| **PASTE** | |
 
 ```
 Before editing, summarize the implementation boundary and required verification.
 ```
 
-Expect: keep `authenticate(token)`, no ApiClient migration, adapter, run compat test.
-
-**Stop.** Do not implement.
+| **SEE** | Summary mentions: keep `authenticate(token)` · no ApiClient migration · adapter · run compat test |
 
 ---
 
-## Optional say lines (cold read)
+### Step 16 — Close
+
+| | |
+|---|---|
+| **WHERE** | **WORKTREE** |
+| **SAY** | That's the handoff. Stopping here. |
+| **PASTE** | — |
+| **SEE** | — |
+
+**Stop Loom.** Do not implement.
+
+---
+
+## Quick copy blocks (paste/type only)
+
+**FIXTURE — paste into Claude:**
 
 ```
-Mixed attempt — reject the rename, keep the test. Recovering selectively, not rewinding.
+Run `node --test tests/auth-compat.test.mjs` and show `git diff --stat`.
 
-Fake mini app: login checker was renamed authenticate → verifyRequest. Useful guardrail test fails. Keeping the test.
+Do not edit anything. Stop after reporting the observable failure and changed files.
+```
 
-Failing test plus diff — that’s the evidence.
+```
+/claude-recovery:recover
+```
 
-Invoking recover.
+```
+Keep the compatibility test and expired-token finding.
 
-Keep the test and finding. Reject the migration. Adapter on the next pass.
+Reject the AuthProvider interface change and ApiClient migration.
 
-Contract looks right. Approving.
+Restart from the clean base, use an adapter, and require the compatibility test before completion.
+```
 
-Only the approved test should differ from the clean base.
+```
+Approved. Run approve and finalize as separate steps, then show the compact receipt.
+```
 
-Fresh session — summarize the boundary, don’t implement yet.
+**WORKTREE — type in terminal:**
 
-That’s the handoff. Stopping here.
+```bash
+cd ~/claude-recovery/.demo/auth-service/.claude/recovery-worktrees/<name-from-receipt>
+git diff --name-only
+```
+
+```bash
+cd '<worktree-from-receipt>' && claude --plugin-dir ~/claude-recovery
+```
+
+**WORKTREE — paste into new Claude:**
+
+```
+Before editing, summarize the implementation boundary and required verification.
 ```
 
 ---
