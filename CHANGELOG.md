@@ -31,7 +31,8 @@ All notable changes to **claude-recovery** are documented here.
 
 - `.github/ISSUE_TEMPLATE/beta-feedback.yml` — sanitized beta feedback questionnaire
 - `docs/SHOW_HN.md` — short Show HN draft
-- `demo/SCRIPT.md` — word-for-word 30–60s Loom teleprompter synced to the auth-service fixture (`verifyRequest` / `ApiClient` / `auth-compat` / expired-token), with exact paste prompts
+- `demo/SCRIPT.md` — word-for-word 30–60s Loom teleprompter (skill intro + why built + auth-service sequence) with exact paste prompts
+- `demo/record.sh` / `npm run demo:record` — one-script Loom recording setup (preflight → fixture → checklist; optional `--launch`)
 
 ### Fixed
 

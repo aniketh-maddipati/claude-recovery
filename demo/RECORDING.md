@@ -1,8 +1,18 @@
 # Loom recording — primary final cut (30–60s)
 
+**Use Loom, not asciinema.** You need mic, screen, and three short overlays; Claude Code is an interactive TUI.
+
 Word-for-word narration + paste blocks: [`demo/SCRIPT.md`](SCRIPT.md)
 
-Prepare the deterministic auth-service fixture:
+Prepare with one script (off camera):
+
+```bash
+./demo/record.sh
+# or: npm run demo:record
+# optional: ./demo/record.sh --launch   # starts Claude after setup
+```
+
+Equivalent manual setup:
 
 ```bash
 npm run demo:preflight

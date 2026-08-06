@@ -109,8 +109,12 @@ test('PROMPTS.md and RECORDING.md match the implemented flow', () => {
   assert.match(script, /Reject the AuthProvider interface change and ApiClient migration/);
   assert.match(script, /Before editing, summarize the implementation boundary/);
   assert.match(script, /Cold-read card/);
-  assert.match(script, /This attempt rewrote AuthProvider to verifyRequest/);
+  assert.match(script, /I built claude-recovery/);
+  assert.match(script, /Here’s that case\. AuthProvider was rewritten to verifyRequest/);
   assert.match(script, /That’s the handoff\. Stopping here\./);
+  assert.match(script, /Loom/);
+  assert.match(script, /asciinema/);
+  assert.match(script, /demo\/record\.sh|npm run demo:record/);
   assert.doesNotMatch(recording, /tail -n 2 \.claude\/recovery\/commands\.jsonl/);
   assert.doesNotMatch(prompts, /seedCommandsEvidence|hardcoded fake timestamps/i);
 });
@@ -128,6 +132,20 @@ test('npm run demo prints the complete primary sequence', () => {
   assert.match(out, /Run approve and finalize as separate steps/);
   assert.match(out, /Before editing, summarize the implementation boundary/);
   assert.match(out, /Do not edit anything\. Stop after reporting/);
+  assert.match(out, /demo:record|demo\/record\.sh/);
+  assert.match(out, /Loom/);
+});
+
+test('demo/record.sh --help documents Loom setup', () => {
+  const result = spawnSync('bash', [join(ROOT, 'demo/record.sh'), '--help'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  });
+  assert.equal(result.status, 0, result.stderr);
+  const out = `${result.stdout ?? ''}${result.stderr ?? ''}`;
+  assert.match(out, /Loom/);
+  assert.match(out, /asciinema/);
+  assert.match(out, /demo\/SCRIPT\.md/);
 });
 
 test('preflight fails clearly when a required executable is missing', () => {

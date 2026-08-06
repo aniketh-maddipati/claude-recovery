@@ -39,13 +39,14 @@ Failing compat test + git diff
 → clean worktree + fresh session with boundary
 ```
 
-Recording cut (30–60s): [`demo/RECORDING.md`](demo/RECORDING.md) · Word-for-word script: [`demo/SCRIPT.md`](demo/SCRIPT.md)
+Record with **Loom** (not asciinema). Cut (30–60s): [`demo/RECORDING.md`](demo/RECORDING.md) · Teleprompter: [`demo/SCRIPT.md`](demo/SCRIPT.md)
 
 ## Try the fixture
 
 ```bash
 npm run demo:preflight
 npm run demo
+npm run demo:record      # one-script Loom setup (prints launch + checklist)
 ```
 
 `npm run demo` builds the deterministic `auth-service` mixed-attempt fixture and prints the full interactive prompt sequence. The fixture is a clean base plus rejected overlay plus useful compatibility test — not proof that Claude independently violated an instruction. `decision.json` and `commands.jsonl` stay absent until the real session captures them.
@@ -203,6 +204,7 @@ npm run setup-hooks:check
 |--------|---------|
 | `npm test` | Unit, demo, mechanical e2e, prompt-eval harness |
 | `npm run demo` | Build `.demo/auth-service` and print the full demo sequence |
+| `npm run demo:record` | One-script Loom recording setup (`demo/record.sh`) |
 | `npm run demo:preflight` | Machine checks before recording |
 | `npm run demo:receipt` | Compact human-readable finalize receipt |
 | `npm run sandbox` | Reset `.sandbox/auth-service` for manual `/recover` |

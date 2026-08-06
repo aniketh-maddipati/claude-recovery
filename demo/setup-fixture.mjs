@@ -154,10 +154,11 @@ ${indentBlock(result.freshSessionPaste)}
 Expected fresh-session themes: preserve AuthProvider.authenticate(token);
 no ApiClient migration; use an adapter; run the compatibility test.
 
-Speaking script (word-for-word, 30–60s): demo/SCRIPT.md
+Recording setup (one script): npm run demo:record   # or ./demo/record.sh
+Speaking script (word-for-word, 30–60s Loom): demo/SCRIPT.md
 Recording cut (30–60s): demo/RECORDING.md
 Copy-paste prompts: demo/PROMPTS.md
-Preflight (not for the final cut): npm run demo:preflight`);
+Use Loom, not asciinema. Preflight is off-camera.`);
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
