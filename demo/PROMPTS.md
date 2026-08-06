@@ -2,8 +2,15 @@
 
 Read **SAY** lines word for word. Paste/type exactly as shown. Stay silent where it says WAIT.
 
-**FIXTURE:** `~/claude-recovery/.demo/auth-service`  
-**WORKTREE:** `~/claude-recovery/.demo/auth-service/.claude/recovery-worktrees/<name-from-receipt>`
+**Short commands** (after `source demo/demo-env.sh`):
+
+| Type | When |
+|------|------|
+| `demo-go` | Step 0 — Claude in FIXTURE |
+| `demo-wt` | Step 7 — worktree diff (after receipt) |
+| `demo-fresh` | Step 8 — fresh Claude in WORKTREE |
+
+Same via npm: `npm run demo:go` · `npm run demo:wt` · `npm run demo:fresh`
 
 ---
 
@@ -11,16 +18,13 @@ Read **SAY** lines word for word. Paste/type exactly as shown. Stay silent where
 
 ```bash
 cd ~/claude-recovery
-npm run demo:reset
-npm run plugin:zip
-npm run demo:preflight
-npm run demo
-export CLAUDE_RECOVERY_PLUGIN_DIR=~/claude-recovery/dist/claude-recovery.zip
+npm run demo:record
+source demo/demo-env.sh
 ```
 
 Start Loom. Open this file beside the terminal.
 
-**Before Step 0:** Launch with the **plugin zip** (fixes missing slash commands on some Claude Code builds). In Claude, run `/help` → **Custom commands** → `claude-recovery:recover`. Step 4 also has a paste fallback.
+**Before Step 0:** `/help` → Custom commands → `claude-recovery:recover` (optional). Step 4 paste works without slash.
 
 ---
 
@@ -30,8 +34,7 @@ Start Loom. Open this file beside the terminal.
 
 **TYPE:**
 ```bash
-export CLAUDE_RECOVERY_PLUGIN_DIR=~/claude-recovery/dist/claude-recovery.zip
-cd ~/claude-recovery/.demo/auth-service && claude --plugin-dir "$CLAUDE_RECOVERY_PLUGIN_DIR"
+demo-go
 ```
 
 **SEE:** Claude Code open; `pwd` ends in `.demo/auth-service`
@@ -96,20 +99,18 @@ Do not edit anything. Stop after reporting the observable failure and changed fi
 **SAY:**
 > I'm invoking recover. It captures Git state and command evidence, then asks me what to keep and reject.
 
-**PASTE into Claude** (primary — works even if the slash command is missing):
+**PASTE into Claude:**
 ```
-Read and follow ~/claude-recovery/skills/recover/SKILL.md.
+Follow skills/recover/SKILL.md.
 
-Run capture and inspect first:
-node ~/claude-recovery/scripts/recovery.mjs capture
-node ~/claude-recovery/scripts/recovery.mjs inspect
+Run capture and inspect (scripts/recovery.mjs).
 
 Show the compact labeled current-attempt view, then ask: What should the next attempt keep, reject, or change?
 
 Stop before writing decision.json or running approve/finalize.
 ```
 
-**Or try slash:** `/claude-recovery:recover`
+**Or slash:** `/claude-recovery:recover`
 
 **WAIT**
 
@@ -160,12 +161,7 @@ Approved. Run approve and finalize as separate steps, then show the compact rece
 **SAY:**
 > Boundary verification passed. Rejected files match the clean base again.
 
-Copy the `cd '…' && claude --plugin-dir '…'` line from the receipt.
-
-**If no receipt, PASTE:**
-```
-node ~/claude-recovery/scripts/recovery.mjs receipt --manifest .claude/recovery/recovery-manifest.json
-```
+**If no receipt:** `npm run demo:receipt`
 
 ---
 
@@ -176,13 +172,12 @@ node ~/claude-recovery/scripts/recovery.mjs receipt --manifest .claude/recovery/
 **SAY:**
 > In the recovery worktree, only the approved test file should differ. Login checker and client should be back to authenticate, not verifyRequest.
 
-**TYPE** — use the worktree folder name from your receipt (not `<name-from-receipt>`):
+**TYPE:**
 ```bash
-cd ~/claude-recovery/.demo/auth-service/.claude/recovery-worktrees/recovery-YYYYMMDD-HHMMSS
-git diff --name-only
+demo-wt
 ```
 
-**Approve** the bash prompt if manual mode asks (this is expected).
+**Approve** bash if manual mode asks.
 
 **SEE:** Only `tests/auth-compat.test.mjs`
 
@@ -200,9 +195,9 @@ git diff --name-only
 **SAY:**
 > Last step — a fresh Claude session in that worktree. SessionStart should inject the approved contract. I'm not asking it to implement yet; I just want it to restate the boundary.
 
-**TYPE** (no `-p`):
+**TYPE:**
 ```bash
-cd '<worktree-from-receipt>' && claude --plugin-dir "$CLAUDE_RECOVERY_PLUGIN_DIR"
+demo-fresh
 ```
 
 **WAIT** until new Claude session is ready
@@ -254,17 +249,7 @@ Do not edit anything. Stop after reporting the observable failure and changed fi
 [SAY] I'm invoking recover. It captures Git state and command evidence, then asks me what to keep and reject.
 
 [PASTE]
-Read and follow ~/claude-recovery/skills/recover/SKILL.md.
-
-Run capture and inspect first:
-node ~/claude-recovery/scripts/recovery.mjs capture
-node ~/claude-recovery/scripts/recovery.mjs inspect
-
-Show the compact labeled current-attempt view, then ask: What should the next attempt keep, reject, or change?
-
-Stop before writing decision.json or running approve/finalize.
-
-(or try slash: /claude-recovery:recover)
+Follow skills/recover/SKILL.md. Run capture and inspect (scripts/recovery.mjs). Show labeled evidence and ask what to keep, reject, or change. Stop before decision or finalize.
 
 [WAIT — SEE evidence + keep/reject question]
 
@@ -290,9 +275,7 @@ Approved. Run approve and finalize as separate steps, then show the compact rece
 
 [SAY] In the recovery worktree, only the approved test file should differ. Login checker and client should be back to authenticate, not verifyRequest.
 
-[TYPE]
-cd ~/claude-recovery/.demo/auth-service/.claude/recovery-worktrees/<name-from-receipt>
-git diff --name-only
+[TYPE] demo-wt
 
 [SEE only tests/auth-compat.test.mjs]
 
@@ -300,8 +283,7 @@ git diff --name-only
 
 [SAY] Last step — a fresh Claude session in that worktree. SessionStart should inject the approved contract. I'm not asking it to implement yet; I just want it to restate the boundary.
 
-[TYPE]
-cd '<worktree-from-receipt>' && claude --plugin-dir "$CLAUDE_RECOVERY_PLUGIN_DIR"
+[TYPE] demo-fresh
 
 [PASTE into new Claude]
 Before editing, summarize the implementation boundary and required verification.

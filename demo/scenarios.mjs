@@ -35,11 +35,9 @@ export const DEMO_SCENARIOS = {
     approvePaste:
       'Approved. Run approve and finalize as separate steps, then show the compact receipt.',
     recoverPaste:
-      'Read and follow ~/claude-recovery/skills/recover/SKILL.md.\n' +
+      'Follow skills/recover/SKILL.md.\n' +
       '\n' +
-      'Run capture and inspect first:\n' +
-      'node ~/claude-recovery/scripts/recovery.mjs capture\n' +
-      'node ~/claude-recovery/scripts/recovery.mjs inspect\n' +
+      'Run capture and inspect (scripts/recovery.mjs).\n' +
       '\n' +
       'Show the compact labeled current-attempt view, then ask: What should the next attempt keep, reject, or change?\n' +
       '\n' +
@@ -102,11 +100,9 @@ This nudge is explicit demo setup — not something to imply happened without in
     approvePaste:
       'Approved. Run approve and finalize as separate steps, then show the compact receipt.',
     recoverPaste:
-      'Read and follow ~/claude-recovery/skills/recover/SKILL.md.\n' +
+      'Follow skills/recover/SKILL.md.\n' +
       '\n' +
-      'Run capture and inspect first:\n' +
-      'node ~/claude-recovery/scripts/recovery.mjs capture\n' +
-      'node ~/claude-recovery/scripts/recovery.mjs inspect\n' +
+      'Run capture and inspect (scripts/recovery.mjs).\n' +
       '\n' +
       'Show the compact labeled current-attempt view, then ask: What should the next attempt keep, reject, or change?\n' +
       '\n' +

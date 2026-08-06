@@ -42,7 +42,7 @@ echo ""
 echo "==> Build fixture"
 npm run demo
 
-LAUNCH="cd '$FIXTURE' && claude --plugin-dir '$PLUGIN_DIR'"
+LAUNCH="demo-go   # after: source demo/demo-env.sh"
 
 cat <<EOF
 
@@ -51,12 +51,11 @@ RECORD WITH LOOM — use demo/PROMPTS.md
 ================================================================
 
 1) Start Loom (single terminal, 16–18 pt)
-2) Launch FIXTURE:
-
-  $LAUNCH
-
-3) Follow demo/PROMPTS.md — read SAY lines, paste/type in order
-4) Stop after fresh session summarizes the boundary
+2) source demo/demo-env.sh
+3) demo-go          (Step 0 — Claude in FIXTURE)
+4) Follow demo/PROMPTS.md — SAY lines + paste prompts
+5) demo-wt            (Step 7 — after receipt)
+6) demo-fresh         (Step 8 — boundary summary, then stop)
 
 Teleprompter: $PROMPTS
 ================================================================
@@ -69,6 +68,7 @@ if [[ "$LAUNCH_CLAUDE" -eq 1 ]]; then
   fi
   echo ""
   echo "==> Starting Claude in FIXTURE (start Loom first if you have not)"
-  cd "$FIXTURE"
-  exec claude --plugin-dir "$PLUGIN_DIR"
+  # shellcheck source=demo/demo-env.sh
+  source "$ROOT/demo/demo-env.sh"
+  demo-go
 fi

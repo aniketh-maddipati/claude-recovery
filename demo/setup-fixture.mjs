@@ -173,9 +173,14 @@ ${indentBlock(result.launchCommand)}
 
 ${result.pluginZipPath && result.launchCommand !== result.directoryLaunchCommand
     ? `Launch (FIXTURE) — directory fallback:\n${indentBlock(result.directoryLaunchCommand)}\n`
-    : ''}Before recording:
-  export CLAUDE_RECOVERY_PLUGIN_DIR='${result.pluginDir}'
-  In Claude: /help → Custom commands → claude-recovery:recover
+    : ''}Short commands (type these on camera):
+  source demo/demo-env.sh
+  demo-go      Step 0 — Claude in FIXTURE
+  demo-wt      Step 7 — worktree diff (after receipt)
+  demo-fresh   Step 8 — fresh Claude in WORKTREE
+
+Before recording:
+  In Claude: /help → Custom commands → claude-recovery:recover (optional)
   If missing, use the recover paste below (Step 4).
 
 ── Paste into Claude (FIXTURE) ──
@@ -196,11 +201,10 @@ ${indentBlock(result.approvePaste)}
 
 ── After receipt (WORKTREE) ──
 
-5) In your terminal (not Claude), cd to the worktree path FROM THE RECEIPT, then:
-   git diff --name-only
-   (expect: only tests/auth-compat.test.mjs)
+5) In your terminal: demo-wt
+   (after: source demo/demo-env.sh — expect only tests/auth-compat.test.mjs)
 
-6) Launch fresh Claude from receipt launch line (same --plugin-dir / zip as Step 0)
+6) demo-fresh   (fresh Claude in WORKTREE)
 
 7) Paste into new Claude session:
 ${indentBlock(result.freshSessionPaste)}

@@ -152,8 +152,7 @@ function main() {
   if (failed.length === 0) {
     console.log('All checks passed.');
     console.log(`Next: npm run demo`);
-    console.log(`Then: export CLAUDE_RECOVERY_PLUGIN_DIR=${join(ROOT, 'dist', 'claude-recovery.zip')}`);
-    console.log(`     cd ${demoFixturePath('auth-service')} && claude --plugin-dir "$CLAUDE_RECOVERY_PLUGIN_DIR"`);
+    console.log('Then: source demo/demo-env.sh && demo-go');
     console.log('In Claude: /help → Custom commands → look for claude-recovery:recover');
     console.log('If the slash command is missing, use the Step 4 recover paste in demo/PROMPTS.md');
     console.log('Follow: demo/RECORDING.md');
